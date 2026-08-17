@@ -1,5 +1,8 @@
 # zChit Progress
 
+- [x] Prepared zChit Owner Android v1.0.0 (`com.zchit.owner`, versionCode 1) using the supplied 512×512 `assets/zchit-owner.png` byte-for-byte; packaged checksum remains `39eca9774f56d19be70efa8f99e7519b73cf81c487fab3382f0bda36900decd7`.
+- [x] Owner launcher artwork is not padded, bordered, or placed in Android's inset foreground safe zone: the exact artwork is the full adaptive background layer and the required foreground is fully transparent. Generated Android adaptive XML/resources inspected successfully; standard icon, splash, and favicon also use the exact artwork. Fixed duplicate `plugins` key that previously disabled the configured splash plugin.
+- [x] Added checksum-enforced `.github/workflows/build-zchit-owner-android.yml`; local Owner TypeScript, Expo config, Expo Doctor `18/18`, workflow YAML, and Android prebuild pass. Pushed commit `4169d87`; Owner APK workflow run `32020227510` is in progress.
 - [x] Published the successful zChit Agent v1.0.0 release APK at `https://chit.zyora.site/downlod/agent/` with direct attachment filename `zChit-Agent-1.0.0.apk`; versioned path is `/downlod/agent/zChit-Agent-1.0.0.apk`.
 - [x] APK distribution verification: GitHub artifact downloaded and uploaded to `/var/www/zchit-downloads/agent/`; public HTTPS returns Android APK MIME, `Content-Length: 57,226,954`, byte-range requests return `206`, and end-to-end SHA-256 matches: `9e79cb1a1cf028860dcdd8e0c8a6f9b2fb3b522693710f2703cd96b726a4505f`.
 - [x] Deployed zChit production to AWS EC2 `ubuntu@54.160.215.79` at `https://chit.zyora.site` behind Cloudflare orange proxy with Flexible SSL and HTTP-only nginx origin. Production checkout: `/opt/zchit`; deployed commit: `6611905`.
