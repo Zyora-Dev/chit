@@ -1,5 +1,7 @@
 # zChit Progress
 
+- [x] Published the successful zChit Agent v1.0.0 release APK at `https://chit.zyora.site/downlod/agent/` with direct attachment filename `zChit-Agent-1.0.0.apk`; versioned path is `/downlod/agent/zChit-Agent-1.0.0.apk`.
+- [x] APK distribution verification: GitHub artifact downloaded and uploaded to `/var/www/zchit-downloads/agent/`; public HTTPS returns Android APK MIME, `Content-Length: 57,226,954`, byte-range requests return `206`, and end-to-end SHA-256 matches: `9e79cb1a1cf028860dcdd8e0c8a6f9b2fb3b522693710f2703cd96b726a4505f`.
 - [x] Deployed zChit production to AWS EC2 `ubuntu@54.160.215.79` at `https://chit.zyora.site` behind Cloudflare orange proxy with Flexible SSL and HTTP-only nginx origin. Production checkout: `/opt/zchit`; deployed commit: `6611905`.
 - [x] Installed Ubuntu production stack: Node.js 22, Python 3.14, PostgreSQL 18, nginx 1.28, build toolchain. Created PostgreSQL role `zchit` and database `zyorachit` with generated server-only password; generated independent production JWT/OTP secrets; production `.env` is mode `600` and was created directly on EC2. Local `.env` was never copied; only ZeptoMail fields were securely transferred over SSH stdin.
 - [x] Fresh database bootstrapped from current SQLAlchemy metadata because Alembic `0001` is an existing-installation marker; verified 40 public tables and stamped `0008 (head)`. Backend dependencies compile on Python 3.14 after installing `build-essential`/`python3-dev` for asyncpg.
