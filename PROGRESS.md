@@ -1,0 +1,504 @@
+# zChit Progress
+
+- [x] Prepared the Collection Agent Android build as **zChit Agent** (`com.zchit.agent`, version `1.0.0`, versionCode `1`) using the supplied `assets/zchit-agent.png` for the app icon, adaptive icon, splash image, and favicon.
+- [x] Added `.github/workflows/build-zchit-agent-android.yml`: manual or main-branch Agent changes run `npm ci`, TypeScript, Expo Android prebuild, Gradle release APK build, and upload `zChit-Agent-Android-APK` for 30 days. The workflow requires GitHub repository variable `EXPO_PUBLIC_API_URL` and rejects missing/invalid URLs so release builds never silently use localhost.
+- [x] Agent build validation passes: TypeScript, Expo public config, Expo Doctor `18/18`, workflow YAML/structure, packaged icon, and clean Android prebuild. Generated `mobile/android` was removed and Expo Go scripts preserved. Local `/Users/redfoxhotels/chit` currently has no `.git` metadata, so the workflow is ready on disk but cannot be pushed/run until this folder is connected to the user’s GitHub repository.
+- [x] Completed a full error audit across browser runtime, Base UI context/default-state patterns, workspace diagnostics, frontend lint/build, backend tests/Alembic, and both Expo TypeScript projects. Fixed Next dev chunk/HMR `403` failures for the shared `127.0.0.1` browser by adding `allowedDevOrigins: ["127.0.0.1"]`, then safely restarted the stale post-build dev server.
+- [x] Fresh browser session after restart has no chunk, HMR, React, or Base UI console errors. Workspace diagnostics: none. Frontend lint/build: clean, 29/29 pages. Backend: 13 passed, DB `0008 (head)`. Agent and Owner mobile TypeScript: clean. Only remaining output is the pre-existing SQLAlchemy row-count warning during member-test cleanup; it is not an application runtime error.
+- [x] Fixed the Company Profile Base UI uncontrolled `FieldControl` warning across the complete company and branch forms. The shared field now uses controlled `value/onChange`, and keyed form remounts safely load async company data and switch Create/Edit Branch records without changing defaults after initialization. No Company-page `Input defaultValue/defaultChecked` remains; diagnostics and lint pass. Browser reached AuthGuard but lacked an authenticated session for sheet-level console verification.
+- [x] Fixed the dashboard notification runtime crash (`Base UI: MenuGroupContext is missing`) by placing the notification `DropdownMenuLabel` inside the required `DropdownMenuGroup`; both dashboard menu labels now have valid Base UI context. Frontend diagnostics and lint pass.
+- [x] Rebuilt Chit Scheme → Record Payment as a member-aware installment selector. Selecting an active member now shows every installment in that enrollment period with payable, previously paid, remaining balance, date, and Paid/Partial/Unpaid/Auction settled status.
+- [x] Fully paid and auction-settled installments remain visible but disabled; unpaid or partial past, current, and future installments remain selectable. Payment submission stays disabled until an eligible installment is selected. Frontend diagnostics/lint pass and production build generates all 29 pages.
+- [x] Wired successful installment collections to two independent post-commit Meta WhatsApp templates; failures are logged separately and can never roll back financial postings.
+- [x] Member contract: `collection_success_member` / `en` with body parameters `{{1}} member name`, `{{2}} installment number`, `{{3}} amount`, `{{4}} scheme name`, `{{5}} receipt number`; recipient is the member mobile.
+- [x] Owner contract: `collection_success_admin` / `en` with body parameters `{{1}} member name`, `{{2}} installment number`, `{{3}} amount`, `{{4}} scheme name`, `{{5}} collector/agent name`, `{{6}} receipt number`; recipient is the registered company mobile. Owner-posted payments use `Owner/Admin`; agent payments use the employee name.
+- [x] Parameterized Meta template payload support added. Focused communication/agent tests pass (`3 passed`); full backend regression passes (`13 passed`, one existing SQLAlchemy cleanup warning). Exact templates must be approved in Meta before live collection delivery succeeds.
+- [x] Made approved Meta template `welcome` (`en`, no parameters) the default once-only WhatsApp message after an admin completes company registration, the first point where the admin mobile number exists.
+- [x] Added additive migration `0008` with `companies.welcome_whatsapp_sent_at`; onboarding uses the enabled central zChit Meta sender, records a masked audit event and message ID, and never rolls back company creation if Meta is unavailable. PostgreSQL is at `0008 (head)`; focused onboarding + communications tests pass (`2 passed`), with final onboarding regression `1 passed`.
+- [x] Added a reusable Meta Cloud API sender for approved parameterless WhatsApp templates plus owner-only `POST /api/v1/communications/whatsapp/test-template`, with E.164 validation, encrypted-token use, masked audit data, and safe Meta error handling.
+- [x] Live-tested template `welcome` (`en`, no parameters) to the approved test recipient; Meta resolved the WhatsApp ID and returned `message_status=accepted` with a `wamid`. Communications regression passes (`1 passed`).
+- [x] Fixed Base UI controlled-state warnings in Communication Settings: async checkboxes and all text/secret fields now use controlled state; the write-only Meta token clears after save while blank updates preserve the stored token. Frontend lint is clean and the production build generates all 29 pages.
+
+## Backend
+
+- [x] Created the initial FastAPI backend structure.
+- [x] Added root and versioned health endpoints.
+- [x] Added dependency, environment example, and Git ignore files.
+- [x] Created the Python virtual environment at `backend/.venv`.
+- [x] Installed FastAPI and Uvicorn dependencies.
+- [x] Verified the application imports and endpoint responses.
+- [x] Started the development API at `http://127.0.0.1:8000` with docs at `/docs`.
+- [x] Created the local PostgreSQL database `zyorachit`.
+- [x] Added async SQLAlchemy database configuration and dependencies.
+- [x] Created and verified the `users` table with unique email and secure password hash storage.
+- [x] Added the non-null `role` field with `owner` as the default user role.
+- [x] Added Argon2 password hashing and JWT access tokens.
+- [x] Implemented register, email verification/resend, and login endpoints.
+- [x] Implemented forgot-password and OTP password-reset endpoints.
+- [x] Added hashed, expiring, single-use email OTP storage.
+- [x] Integrated ZeptoMail's transactional email API through environment configuration.
+- [x] Verified live ZeptoMail OTP delivery through the registration endpoint.
+- [x] Added and passed the complete PostgreSQL authentication integration test.
+- [x] Added JWT-authenticated owner route dependencies.
+- [x] Added company onboarding with generated unique `ZCH-XXXXXXXXXX` codes.
+- [x] Added company contact, legal, GSTIN, PAN, website, and active-status fields.
+- [x] Added multiple structured company addresses with one primary address.
+- [x] Added validated PNG/JPEG/WebP company logo upload and static delivery.
+- [x] Added and passed company onboarding integration tests (`2 passed` total).
+- [ ] Configure Alembic migrations.
+- [ ] Expand role-based authorization for future staff and collection-agent roles.
+
+## Frontend
+
+- [x] Initialized Next.js 16 with TypeScript, App Router, Tailwind CSS, and ESLint.
+- [x] Initialized shadcn/ui and added reusable form, card, button, badge, and layout components.
+- [x] Added the emerald green Inter-based zChit design system.
+- [x] Built the responsive enterprise landing page.
+- [x] Built professional login and owner registration pages.
+- [x] Built email verification, forgot-password, and reset-password pages.
+- [x] Connected authentication forms to FastAPI through a same-origin Next.js proxy.
+- [x] Passed ESLint and the Next.js production build with all seven routes generated.
+- [x] Corrected Base UI link-button semantics with `nativeButton={false}`.
+- [x] Added a protected authenticated `/dashboard` route.
+- [x] Added responsive desktop sidebar and mobile sheet navigation.
+- [x] Built the enterprise operations dashboard with KPIs, collection trends, priorities, receipts, and field-agent progress.
+- [x] Linked successful login to the dashboard and added secure client logout.
+- [x] Completed desktop and mobile browser review and fixed mobile table overflow.
+- [x] Passed final ESLint and production build validation with eight application routes.
+- [x] Refined dashboard to compact admin-panel density: narrower shell, shorter header, smaller KPI cards, chart, widgets, table rows, and field-team panel.
+- [x] Rechecked compact dashboard at 1440px and 390px with no horizontal overflow.
+- [x] Suppressed body hydration warnings caused by browser extensions injecting `cz-shortcut-listen`.
+- [x] Added company-status detection after owner login.
+- [x] Redirect owners without a company to `/onboarding/company`; completed owners continue to `/dashboard`.
+- [x] Built responsive company onboarding for identity, contact, GSTIN, PAN, registered address, website, and optional logo.
+- [x] Added dashboard company-status banner with onboarding CTA or company name/code.
+- [x] Connected company creation and logo upload to authenticated FastAPI endpoints.
+- [x] Visually reviewed company onboarding at desktop and mobile widths with no overflow.
+- [x] Passed ESLint and production build with nine application routes.
+- [x] Diagnosed onboarding fetch failure as the temporary browser visual-review token, not backend/proxy connectivity.
+- [x] Removed the stale test token and added automatic 401 cleanup/redirect to login for company API calls.
+- [x] Fixed the header account dropdown by adding Base UI's required menu-group context.
+- [x] Browser-verified the account pill opens Profile, Settings, and Sign out actions.
+- [x] Fixed company onboarding `Failed to fetch`: removed FastAPI's POST 307 trailing-slash redirect that caused a failed CORS preflight.
+- [x] Verified direct and proxied company POST routes now respond in place (`401` without auth), with no redirect.
+- [x] Added company-scoped member and dynamic member-reference database tables.
+- [x] Added member create, list/search, and detail APIs with owner/company isolation.
+- [x] Protected Aadhaar by storing only a SHA-256 digest and last four digits; plaintext is never persisted or returned.
+- [x] Added private cancelled-cheque and bank-statement uploads with MIME, signature, and 10 MB validation.
+- [x] Built compact member list/dashboard page with search, KYC visibility, document status, and summary cards.
+- [x] Built add-member form with personal details, address, Aadhaar/PAN, dynamic references, cheque, and statement uploads.
+- [x] Passed member backend integration test and final frontend ESLint/production build (`13` routes generated).
+- [x] Compacted the add-member form to a focused `max-w-3xl` admin layout with tighter cards and spacing.
+- [x] Added optional private member photo upload with JPEG/PNG MIME and binary-signature validation.
+- [x] Added nullable member photo fields through an additive PostgreSQL migration and verified member test/build passes.
+- [x] Added live member photo preview with object-URL cleanup.
+- [x] Added private Aadhaar and PAN document uploads with PDF/JPEG/PNG signature validation.
+- [x] Added identity-document metadata through an additive PostgreSQL migration and verified all five member uploads in integration tests.
+- [x] Fixed `[object Object]` errors by formatting FastAPI validation arrays and object details into readable field messages.
+- [x] Applied shared readable error handling to JSON APIs, company logo upload, and all member file uploads.
+- [x] Added dynamic member detail route `/dashboard/members/[id]` linked from the member list.
+- [x] Added member profile, private photo, masked KYC, full address, references, and document-status panels.
+- [x] Added company-scoped authenticated private document retrieval for photo, Aadhaar, PAN, cheque, and bank statement.
+- [x] Passed private document integration tests and final frontend build with the dynamic member route.
+- [x] Added company-scoped member update and permanent delete APIs.
+- [x] Added prefilled dynamic edit route `/dashboard/members/[id]/edit` with references and optional Aadhaar replacement.
+- [x] Added Edit and confirmed Delete actions to the member detail page.
+- [x] Member deletion removes database records, references, and all private uploaded files.
+- [x] Passed complete member create/read/update/delete lifecycle test and final frontend build.
+- [x] Added company-scoped chit group, generated schedule, enrollment, and payment tables.
+- [x] Added multiple-scheme APIs for create/list/detail, manual schedule updates, member enrollment, and payment collection.
+- [x] Built four-step scheme wizard: details, generated/editable rows, member selection, and review.
+- [x] Built elegant chit-group list and dynamic detail page with schedule, enrolled members, totals, and payment history.
+- [x] Added record-payment sheet with member, installment, amount, date, mode, reference, and notes.
+- [x] Corrected payment schedule foreign key to cascade with scheme lifecycle using an additive constraint migration.
+- [x] Passed complete chit lifecycle test (including two schemes) plus clean frontend lint and production build (`15` routes).
+- [x] Fixed non-working Generate schedule action: Base UI button required explicit `type="submit"` inside the scheme form.
+- [x] Audited every chit wizard/payment action and set explicit submit/button semantics.
+- [x] Reverified full chit lifecycle test, clean lint, and production build after the action fix.
+- [x] Added member search in chit wizard step 3 by name, mobile number, or member code while preserving selections.
+- [x] Fixed schedule generation failure for reused scheme names by removing the incorrect company/name unique constraint.
+- [x] Schemes are now uniquely identified only by generated group codes, allowing multiple schemes with the same display name.
+- [x] Verified two same-name schemes generate independent schedules successfully.
+- [x] Added company-scoped auction records with one auction per scheme installment.
+- [x] Added winner payout settlement: payable installment is adjusted from payout and normal payment is blocked.
+- [x] Added scheme tabs for Overview, Schedule, Members, Auctions, and Collections.
+- [x] Added human-readable dropdown labels for member, installment/date/amount, and payment mode; IDs remain internal only.
+- [x] Added clickable scheme members with full installment/payment/auction ledger route.
+- [x] Added global `/dashboard/auctions` view aggregating settlements across all schemes.
+- [x] Added auction settlement sheet with winner, installment, bid, discount, commission, dividend, payout, and notes.
+- [x] Passed auction lifecycle test: settlement, net payout, payment blocking, member ledger, global aggregation, clean lint/build (`16` routes).
+- [x] Fixed Base UI Select closed triggers to map internal IDs back to human-readable labels instead of displaying raw IDs.
+- [x] Audited all application dropdowns; member, auction winner, installment/date/amount, and payment-mode selections now remain readable after selection.
+- [x] Simplified installment schedules to Date, Payable amount, and manually entered Receivable amount.
+- [x] Payable amount now represents the member installment; receivable amount represents the auction winner's gross payout.
+- [x] Auction settlement derives gross payout from the selected schedule receivable amount and deducts the winner's payable amount automatically.
+- [x] Updated scheme schedule and member ledger screens to show all schedule rows without truncation.
+- [x] Added receivable amount through an additive PostgreSQL migration and passed revised chit lifecycle/lint/build validation.
+- [x] Polished scheme tabs into an icon-led emerald segmented navigation with clear active states and horizontal mobile scrolling.
+- [x] Refined the full schedule with dark headers, zebra rows, hover highlighting, installment chips, and highlighted payable/receivable amounts.
+- [x] Refined members, auctions, and collections with gradient headers, count badges, stronger cards, financial highlights, and elegant empty states.
+- [x] Passed final frontend lint and production build after scheme UI polish.
+- [x] Added company-scoped collection report API with scheme, member, date range, and payment-mode filters.
+- [x] Added collection summary totals for amount, transactions, unique members, and schemes covered.
+- [x] Added date-wise collection trends and payment-mode breakdowns.
+- [x] Built informative `/dashboard/collections` report with readable selectors and complete payment details.
+- [x] Added detailed rows for scheme/member/installment/due date/mode/reference/amount with zebra and highlighted styling.
+- [x] Passed collection filter integration tests, clean frontend lint, and production build (`17` routes).
+- [x] Removed unrequested date-wise and payment-mode breakdown cards from the collections page.
+- [x] Reorganized report filters into one neatly aligned, consistently labeled desktop row with compact controls.
+- [x] Kept date range and payment mode exclusively as report filters while preserving summary totals and detailed records.
+- [x] Rebuilt global Auctions as a filtered report with scheme, winning member, status, and date-range filters in one row.
+- [x] Added auction summary cards for count, gross payout, settled installments, and net payout.
+- [x] Added complete auction table with bid, discount, commission, dividend, gross/settled/net payout, and status.
+- [x] Linked auction winners and collection-report members to `/dashboard/members/{id}` detail pages.
+- [x] Linked scheme names in auction and collection records to their scheme detail pages.
+- [x] Passed auction filter integration tests, clean frontend lint, and production build.
+- [x] Added member profile cards for total payment collections and auction settlement/gross/net payout totals.
+- [x] Added auditable scheme enrollment periods with active/discontinued status and replacement lineage.
+- [x] Added Discontinue & Replace action with readable replacement member, effective installment, and reason.
+- [x] Preserved historical payments and auction settlements while transferring future installments to the replacement.
+- [x] Enforced enrollment periods so old members cannot pay future installments and replacements cannot access prior rows.
+- [x] Displayed active/discontinued status and installment ranges throughout scheme member views.
+- [x] Passed complete transfer accounting lifecycle test, clean frontend lint, and production build.
+- [x] Moved recurring Payment Collections and Auction Settlements from the top of member detail into a compact right-side Financial Activity panel above Documents.
+- [x] Kept profile, KYC, address, and references immediately visible without being pushed down by financial cards.
+- [x] Added company-scoped branches with generated branch codes, contact details, manager, address, and active status.
+- [x] Added branch create/list/update/delete APIs with company isolation and duplicate-name protection.
+- [x] Built `/dashboard/company` with company identity, registered office, tax details, and branch management.
+- [x] Added branch create/edit sheets, active/inactive status, and confirmed deletion.
+- [x] Passed branch CRUD integration test, clean frontend lint, and production build (`18` routes).
+- [x] Fixed Company Profile infinite loading caused by 401 responses from an expired/stale JWT.
+- [x] Company Profile now clears invalid sessions and redirects to login; non-auth loading failures display readable errors.
+- [x] Restored Company Profile editing without removing branch management.
+- [x] Added owner-authenticated `PUT /api/v1/companies/me` for identity, tax, contact, website, and registered-address updates.
+- [x] Restored visible Change Logo action using the existing validated logo endpoint and frontend upload proxy.
+- [x] Added prefilled Edit company and Change logo sheets alongside Create branch.
+- [x] Passed clean company edit/logo integration test, frontend lint, and production build.
+- [x] Consolidated logo replacement into the Edit company sheet and removed the redundant standalone Change logo action.
+- [x] Edit company now saves profile/address changes and optionally replaces the logo in one workflow while preserving branch management.
+- [x] Added immutable double-entry ledger postings for payment collections and auction settlements.
+- [x] Added unique payment receipt numbers and auction settlement voucher numbers.
+- [x] Added partial installment payments with remaining-balance validation and fully-paid protection.
+- [x] Added branch, collector/settler, payment source, timestamp, and status attribution to financial postings.
+- [x] Added append-only payment and auction reversals with mandatory reasons and opposite ledger entries.
+- [x] Added authenticated receipt, voucher, and filtered immutable-ledger APIs.
+- [x] Built printable payment receipt and auction settlement voucher pages with reversal controls.
+- [x] Built `/dashboard/ledger` with scheme/member/date filters, debit/credit columns, source references, reversal lineage, and balance indicator.
+- [x] Linked collection records to receipts and auction records to vouchers; added receipt/voucher actions inside scheme tabs.
+- [x] Passed full accounting lifecycle test, clean frontend lint, and production build (`19` routes) without breaking existing modules.
+- [x] Added additive advance-payment, advance-allocation, and audit-log database tables without altering existing financial records.
+- [x] Added company-scoped advance receipt creation with scheme/member validation, payment mode, reference, branch attribution, and unique receipt numbers.
+- [x] Posted advance receipts to an immutable balanced ledger as cash/bank debit and member-advance-liability credit.
+- [x] Added automatic oldest-eligible installment allocation with enrollment-period, settled-auction, over-allocation, and fully-paid protections.
+- [x] Advance allocations generate normal installment payments and receipts, reduce the advance liability, and preserve allocation lineage.
+- [x] Added advance status and balance tracking for available, partially allocated, and fully allocated receipts.
+- [x] Added company-scoped audit history with actor email, action, entity, old/new values, timestamp, IP address, and user agent.
+- [x] Integrated audit events for advance receipts/allocations and core payment/auction posting and reversal actions.
+- [x] Built `/dashboard/advance-payments` with date/scheme/member/status filters, summary totals, readable selectors, receipt register, and automatic allocation.
+- [x] Built `/dashboard/audit-history` with action/entity/date filters and expandable old/new value details.
+- [x] Added Advance payments and Audit history dashboard navigation without removing existing modules.
+- [x] Passed focused advance/accounting regression tests (`2 passed`), clean frontend lint, and production build (`21` dashboard/application pages generated).
+- [x] Added optional member date of birth through an additive, data-preserving PostgreSQL migration.
+- [x] Added nominee name, relationship, mobile number, and date of birth to member create/update/detail workflows.
+- [x] Added account-holder name, account number, bank, branch, IFSC, and account type to member create/update/detail workflows.
+- [x] Kept the existing dynamic References module and intentionally added no duplicate guarantor fields.
+- [x] Masked bank account numbers on the member profile while retaining complete owner-scoped edit data.
+- [x] Extended member API validation for nominee phone, bank account number, IFSC, and account type.
+- [x] Passed the complete member lifecycle test (`1 passed`), clean frontend lint, and production build after the member-profile expansion.
+- [x] Added scheme member/slot capacity, active-member count, available slots, foreman commission, maturity, grace period, late-fee rule, and lifecycle status.
+- [x] Enforced one auction win per actual member within a scheme, including replacement-enrollment history.
+- [x] Added replacement-aware final reconciliation using each enrollment's effective installment period.
+- [x] Added expected dues, principal/cash collection, auction settlement/payout, outstanding, expected closing balance, actual balance, and variance reconciliation.
+- [x] Added scheme-detail Final reconciliation sheet and permanent close action; completed schemes block further financial activity.
+- [x] Rebuilt auction settlement as pending → owner approved/winner acknowledged → payout verified/paid.
+- [x] Added payout date, mode, reference, verification actor/time, required settlement proof, authenticated proof viewing, and paid voucher generation.
+- [x] Removed dividend from active auction requests, calculations, reports, and UI; legacy database fields remain zero only for compatibility.
+- [x] Expanded collections with principal, fees, penalties, waiver/reason, excess, received, refunds, net receipt, source, collector, branch, location/GPS, notes, status, and overdue ageing.
+- [x] Added reversed collection visibility and corrected ageing for discontinued/replacement enrollment periods.
+- [x] Removed stale duplicate collection-page source left by the partial enhancement edit.
+- [x] Passed updated scheme/auction/collection and advance accounting lifecycle tests (`2 passed`), clean frontend lint, and production build.
+- [x] Replaced immediate member switching with a staged replacement request and owner-approval workflow.
+- [x] Added immutable transfer records containing old enrollment, replacement member, effective installment/date, reason, and new-enrollment lineage.
+- [x] Added transfer-time outstanding balance snapshots and blocked approval until the snapshot balance is cleared.
+- [x] Added mandatory acknowledgement by both existing and replacement members.
+- [x] Added required private consent documents for both members with authenticated retrieval endpoints.
+- [x] Added pending/approved status, requester/approver attribution, timestamps, approval notes, and audit-history events.
+- [x] Preserved all historical payments and auctions under the old member while assigning only future effective installments to the replacement.
+- [x] Built replacement request, consent upload, approval, outstanding visibility, and complete replacement-history UI inside scheme Members.
+- [x] Passed replacement plus accounting regression tests (`2 passed`), clean frontend lint, and production build.
+- [x] Installed Alembic in `backend/.venv`, added async migration configuration and baseline revision, and stamped PostgreSQL at `0001 (head)`.
+- [x] Added global auction bid-register controls for readable bidders, bid/discount entries, history, and unpaid-auction cancellation.
+- [x] Added owner scheme cancellation control with mandatory reason and backend financial-safety checks.
+- [x] Added collection-row refund controls using append-only refund records and balanced refund ledger entries.
+- [x] Added filtered collection CSV download and browser Print/PDF reporting controls.
+- [x] Added refresh-token persistence on login, automatic access-token renewal/rotation after 401, session cleanup, and server-side logout revocation.
+- [x] Replaced static dashboard samples with live company-scoped collection, member, KYC, scheme, auction, chart, and receipt data.
+- [x] Passed complete backend regression suite (`6 passed`), verified Alembic `0001 (head)`, clean frontend lint, and production build.
+- [x] Added complete company-scoped employee master with generated employee codes and branch assignment.
+- [x] Added personal, contact, current/permanent address, employment, emergency-contact, nominee, and collection-agent fields.
+- [x] Added India statutory data: hashed Aadhaar/last-four, PAN, UAN, PF member ID, ESIC IP, professional tax, labour welfare fund, and tax regime.
+- [x] Added bank account details with masked display and private evidence support.
+- [x] Added effective-dated salary structures with CTC, basic, HRA, allowances, incentives, statutory deductions, gross, and net salary history.
+- [x] Added flexible private employee documents for identity, bank, address, education, experience, appointment, contract, PF/ESIC, nominee, police verification, licence, and other evidence.
+- [x] Added employee KYC review requiring corresponding uploaded evidence, reviewer/time, rejection reason, and audit events.
+- [x] Added employee archive/restore preserving salary, KYC, documents, and audit history.
+- [x] Built `/dashboard/employees`, `/dashboard/employees/new`, and `/dashboard/employees/[id]` for register, onboarding, profile, KYC, documents, salary, and archive workflows.
+- [x] Added Alembic employee revision `0002`; database verified at `0002 (head)`.
+- [x] Passed complete backend suite including employee lifecycle (`7 passed`), clean frontend lint, and production build (`23` routes generated).
+- [x] Simplified employee onboarding to one mobile number and one email address.
+- [x] Converted gender, marital status, blood group, emergency/nominee relationship, department, designation, employment type, work mode, account type, and tax regime into controlled dropdowns.
+- [x] Restricted department values to HR, Admin, Sales, and Collection.
+- [x] Restricted designation values to Manager, Supervisor, Agent, Executive, Security, and Office Boy.
+- [x] Removed nominee DOB, nominee address, and nominee-share inputs from employee onboarding while retaining name, relationship, and mobile.
+- [x] Added salary details directly to employee onboarding and creates employee plus initial salary in one backend transaction.
+- [x] Kept application roles and permissions out of employee onboarding for the separate User module.
+- [x] Passed clean frontend lint and production build after employee-form simplification.
+- [x] Added monthly company-scoped payroll runs generated from effective employee salary structures.
+- [x] Added payroll employee snapshots preserving employee code, name, department, designation, branch, and selected salary structure.
+- [x] Added manual payable-day and loss-of-pay-day adjustments with half-day support and prorated earnings/deductions.
+- [x] Added draft → approved → paid payroll workflow with owner attribution and audit history.
+- [x] Added verified payroll payment date, mode, reference, unique voucher, and required private payment proof.
+- [x] Added payroll summary totals for gross salary, deductions, and net salary.
+- [x] Built `/dashboard/payroll` register and `/dashboard/payroll/[id]` processing interface.
+- [x] Added dedicated Employees and Payroll navigation entries.
+- [x] Added Alembic payroll revision `0003`; database verified at `0003 (head)`.
+- [x] Passed complete backend suite including payroll lifecycle (`8 passed`), clean frontend lint, and production build (`24` routes generated).
+- [x] Added restricted collection-agent user accounts linked to active collection-enabled employees.
+- [x] Kept every existing administrative endpoint owner-only; agents use a separate minimal API surface.
+- [x] Added owner assignment of complete schemes or specific member enrollments to collection agents.
+- [x] Added GPS check-in/check-out shifts; assigned members remain inaccessible before check-in.
+- [x] Added continuous GPS location ingestion only while an agent shift is active.
+- [x] Added agent-only assigned member, scheme, installment, paid amount, and balance visibility.
+- [x] Added agent collection posting for full/partial installments and advance receipts with payment mode, reference, notes, immutable agent identity, GPS, timestamp, branch, receipt, ledger, and audit history.
+- [x] Explicitly blocked agents from owner member lists, refunds, reversals, auctions, payroll, accounting, and administrative actions.
+- [x] Built `/dashboard/agents` for account creation, scheme/member assignment, shift status, and live location coordinates ready for Google Maps API configuration.
+- [x] Added Alembic collection-agent revision `0004`; database verified at `0004 (head)`.
+- [x] Passed complete backend suite including agent lifecycle (`9 passed`), clean frontend lint, and production build (`25` routes generated).
+- [x] Added dynamic company-scoped permissions, custom roles, role-permission mapping, and employee-linked application users.
+- [x] Added employee-code login IDs while preserving owner email login.
+- [x] Added fixed immutable Collection Agent system permissions for check-in, GPS, assignments, collection, and receipts.
+- [x] Prevented custom roles from receiving or modifying Collection Agent-only permissions.
+- [x] Added owner creation of employee credentials with role and optional branch scope.
+- [x] Added immediate user activation/deactivation and owner password reset with audit history.
+- [x] Linked Collection Agent credential creation to the restricted agent identity automatically.
+- [x] Built `/dashboard/users` for custom roles, module/action permissions, employee credentials, status, and password administration.
+- [x] Added installable owner monitoring PWA manifest, icon, service worker, standalone display, theme metadata, and cached dashboard shell.
+- [x] Added Alembic Users & Roles revision `0005`; database verified at `0005 (head)`.
+- [x] Passed complete backend suite including RBAC lifecycle (`10 passed`), clean frontend lint, and warning-free production build (`26` routes generated).
+- [x] Rebuilt the Create User side sheet with one clean component, consistent width, aligned labels/controls, generous spacing, explanatory helper text, and a sticky action footer.
+- [x] Removed the obsolete duplicate UserSheet source that caused conflicting alignment and layout behavior.
+- [x] Passed clean frontend lint and production build after the Create User sheet correction.
+- [x] Scaffolded the collection-agent mobile application under `mobile/` using Expo Go, React Native, and TypeScript.
+- [x] Added zChit Agent native identity for iOS and Android with portrait orientation and emerald splash background.
+- [x] Built an elegant animated emerald splash screen with a replaceable logo placeholder and collection-agent positioning.
+- [x] Built a polished employee-code/password login screen with no registration flow.
+- [x] Connected mobile login to the existing `/api/v1/auth/login` employee-code endpoint with readable errors and loading state.
+- [x] Added `.env.example` for LAN-accessible backend configuration through `EXPO_PUBLIC_API_URL`.
+- [x] Passed mobile TypeScript validation and Expo public configuration validation on SDK 57.
+- [x] Corrected Expo Go compatibility by aligning the mobile project to stable Expo SDK 56 and React Native 0.85.3.
+- [x] Moved native splash configuration to the SDK-compatible `expo-splash-screen` config plugin.
+- [x] Revalidated mobile TypeScript and Expo public configuration after the SDK alignment.
+- [x] Aligned the mobile app to Expo SDK 54, React Native 0.81.5, React 19.1, and the SDK-compatible splash plugin for current Play Store Expo Go.
+- [x] Passed all Expo Doctor checks (`18/18`) and TypeScript validation after the SDK 54 alignment.
+- [x] Added encrypted mobile access/refresh token storage with automatic session restoration after relaunch.
+- [x] Added a mandatory GPS services and foreground-permission gate; the agent app remains locked until location access is enabled.
+- [x] Added mobile attendance check-in/check-out using high-accuracy GPS coordinates and timestamps.
+- [x] Added active-shift restoration through `/api/v1/agent/status`.
+- [x] Added foreground live GPS updates every 15 seconds or 20 metres while an agent shift is active; tracking stops on checkout/logout.
+- [x] Built the mobile collection-agent dashboard with attendance state, assigned-member count, and restricted member cards.
+- [x] Locked assigned-member visibility and collections until successful GPS check-in.
+- [x] Built assigned member/scheme/installment balance views with full or partial amount collection.
+- [x] Added advance collection, payment-mode selection, reference, notes, automatic collection GPS, and receipt confirmation.
+- [x] Passed complete backend suite (`10 passed`), Expo Doctor (`18/18`), and mobile TypeScript validation.
+- [x] Added owner-only agent shift location-history API with ordered GPS points for current and completed travel routes.
+- [x] Integrated Google Maps JavaScript rendering in `/dashboard/agents` using live agent markers and travelled-route polylines.
+- [x] Added selected-agent route highlighting, current-position markers, GPS point counts, and latest update details.
+- [x] Added automatic 15-second refresh for agent states, current coordinates, and route histories.
+- [x] Added documented `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` configuration and a safe setup state when the key is absent.
+- [x] Passed complete backend suite (`10 passed`), clean frontend lint, and production build after Google Maps integration.
+- [x] Restored the original Collection Agents admin layout with summary cards, checked-in agents, and the full agent register.
+- [x] Moved Google Maps rendering to the dedicated `/dashboard/agents/map` page, accessible through View live map actions.
+- [x] Added per-agent View map actions for checked-in agents without changing assignment/account management layout.
+- [x] Created visible `frontend/.env.local` with `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=` for local key configuration.
+- [x] Passed clean frontend lint and production build (`27` routes generated) after restoring the admin layout.
+- [x] Refined agent assignments to return the complete installment list with unambiguous Paid, Partial, Late due, Due, and Upcoming statuses.
+- [x] Restricted collection to a specifically selected collectible installment; paid and future installments cannot be collected again or early.
+- [x] Unified mobile collection into Regular, Late, and Advance options with Full or Partial controls for installment payments.
+- [x] Enforced current-month Regular, prior-month Late, exact-balance Full, below-balance Partial, and schedule-free Advance validation in the backend.
+- [x] Added explicit captured checkout time to the dedicated agent map detail view.
+- [x] Passed the focused agent lifecycle, complete backend suite (`10 passed`), Expo Doctor (`18/18`), mobile TypeScript, and frontend lint after collection workflow refinement.
+- [x] Fixed mobile collection installment ordering by sorting the agent API and mobile panel by installment number and due date, matching the web admin schedule.
+- [x] Revalidated the focused agent lifecycle (`1 passed`) and mobile TypeScript after the sorting correction.
+- [x] Corrected mobile/web status mismatch by including paid auction-settlement amounts when calculating agent installment paid totals and balances.
+- [x] Preserved Partial status for any partly paid installment regardless of whether its configured due date is current or future.
+- [x] Made every mobile installment row selectable: paid rows remain viewable but protected from duplicate collection, while future rows automatically use Advance collection.
+- [x] Verified Subburaj Thiyagarajan's actual data resolves as installment 1 Paid through auction, installment 2 Paid, installment 3 Partial, and later installments Upcoming/selectable.
+- [x] Passed focused agent lifecycle (`1 passed`) and mobile TypeScript after the auction-aware interaction correction.
+- [x] Rebuilt mobile collection as an installment-first two-step flow: opening a member shows only installments, and tapping a specific unpaid installment opens its dedicated collection form.
+- [x] Added a prominent selected-installment summary with installment number, due date, and outstanding balance above collection controls.
+- [x] Kept Full/Partial, Regular/Late/Advance, payment mode, reference, notes, and confirmation exclusively inside the selected installment form.
+- [x] Added a back-to-installments action and installment-specific confirmation label to prevent collecting against an unclear row.
+- [x] Forced collection confirmation and success Done actions to full width with fixed minimum height to prevent shrunken buttons.
+- [x] Passed mobile TypeScript validation after the installment-first workflow correction.
+- [x] Fixed selected-installment Advance collection so mobile always sends the clicked schedule ID instead of silently creating an unrelated general advance receipt.
+- [x] Backend now creates an Advance receipt for selected-schedule Advance collections and immediately allocates it to that installment through `AdvanceAllocation` and an `advance`-source installment payment.
+- [x] Allowed future installment posting only when collection type is Advance and retained Full/Partial balance validation for Advance.
+- [x] Refreshed agent assignments before showing collection success so updated paid amount, balance, and status are immediately available.
+- [x] Selected-installment Advance remains visible in the Advance module as allocated, appears in Collections, and updates the selected installment balance/status.
+- [x] Preserved balanced accounting: receipt debits cash/bank and credits advance liability; allocation debits liability and credits installment receivable.
+- [x] Added regression proof for Advance module visibility, full allocation, installment update, Collections visibility, and schedule-free general advances.
+- [x] Passed agent and Advance accounting lifecycle tests (`2 passed`) plus mobile TypeScript after the dual-module allocation fix.
+- [ ] Resolve Subburaj's two existing ₹22,000 unallocated advance receipts only after owner confirms whether one or both are valid collections.
+- [x] Added agent-only `GET /api/v1/agent/collections` history with strict logged-in-agent isolation and access after checkout.
+- [x] Added collection history date-range and customer-name filters plus assigned-customer autocomplete suggestions.
+- [x] Combined Regular/Late installment receipts and Advance receipts without double-counting immediately allocated advances.
+- [x] Added Today Collected amount/count totals and complete filtered totals to the agent history response.
+- [x] Added a spacious Today Collected card with View all action to the mobile agent home screen.
+- [x] Built the dedicated mobile Collections screen with date inputs, customer autocomplete, Apply/Clear actions, filtered summary, and readable receipt cards.
+- [x] Collection cards show customer, scheme, installment/general advance, Regular/Late/Advance type, mode, date, amount, and receipt number.
+- [x] Collection history refreshes after successful posting and resets to unfiltered data when returning Home so Today stats remain complete.
+- [x] Passed agent and Advance API lifecycle tests (`2 passed`) and mobile TypeScript after the collection-history feature.
+- [x] Added explicit vertical separation between the Shift Active and Today Collected home cards so they no longer visually merge.
+- [x] Matched the Collections header to the Home Android top-safe spacing (`paddingTop: 34`) to prevent collision with the mobile status area.
+- [x] Compacted the Collections filter section with smaller padding, 38px inputs, 36px actions, tighter labels/gaps, and a reduced summary card.
+- [x] Passed mobile TypeScript after the batched collection-screen spacing correction.
+- [x] Added emerald pull-to-refresh controls to Home and Collections; Home refreshes shift status, assignments, and today stats, while Collections preserves active filters.
+- [x] Installed SDK-compatible `expo-task-manager` and added a top-level background location task for active agent shifts.
+- [x] Added Always/background location permission request during check-in and native Android foreground-service tracking notification.
+- [x] Background tracking starts/restores with an active shift and stops on checkout or logout while foreground tracking remains intact.
+- [x] Configured Android background/foreground-service permissions and iOS Always-location/background mode descriptions.
+- [x] Validated `app.json`, Expo public config, mobile TypeScript, and Expo Doctor (`18/18`) after background tracking integration.
+- [x] Documented that persistent background tracking requires a native development/production build and is unavailable in Expo Go; force-stop or OS restrictions can stop updates.
+- [x] Replaced the no-op mobile hamburger with a real left drawer containing Home, Collections, Profile, and Logout.
+- [x] Added active drawer states, backdrop dismissal, agent identity header, and secure logout using the existing session/background-tracking cleanup.
+- [x] Added agent-only `GET /api/v1/agent/profile` exposing safe self-service employee details without Aadhaar, bank, payroll, or internal notes.
+- [x] Built a safe-header Profile screen with employee identity, employment, contact, KYC, address, and emergency-contact details.
+- [x] Added Profile pull-to-refresh and consistent drawer access from Home, Collections, and Profile.
+- [x] Passed mobile TypeScript and focused agent lifecycle (`1 passed`) after drawer/profile implementation.
+- [x] Created the existing navigation target `/dashboard/reports` as a consolidated owner financial report.
+- [x] Added company-isolated overall report data for collections and advance inflows plus refund, paid-auction, and paid-payroll outflows.
+- [x] Prevented allocated advances from being double-counted by reporting the Advance receipt as inflow and excluding its generated allocation payment.
+- [x] Added transaction type, scheme, member, payment mode, and date-range filters with inflow, outflow, net cash flow, transaction-count, and type summaries.
+- [x] Added filtered CSV download containing the exact visible timeline rows.
+- [x] Added print-optimized PDF export through the browser Print/PDF flow using the exact filtered report view.
+- [x] Built the full financial timeline table with date, type, direction, reference, scheme, member, description, mode, amount, and status.
+- [x] Passed agent/advance accounting report tests (`2 passed`), frontend lint, and production build with `/dashboard/reports` generated (`28/28` pages).
+- [x] Fixed Reports page not opening after build: restarted the stale day-old Next.js dev server whose in-memory manifest no longer matched replaced `.next` chunks.
+- [x] Verified `/dashboard/reports` returns HTTP 200 and every referenced Next.js JavaScript chunk now returns HTTP 200.
+- [x] Removed Notifications from the dashboard sidebar while retaining the existing notification bell in the header.
+- [x] Renamed the Collection agents sidebar module to Agents.
+- [x] Replaced the broken Field tracking sidebar route with Agents Tracking linked to `/dashboard/agents/map`.
+- [x] Passed frontend lint after the sidebar navigation correction.
+- [x] Created `/dashboard/settings` as an enforceable account-security center rather than cosmetic preferences.
+- [x] Added additive Alembic revision `0006` for encrypted MFA enrollment, hashed recovery codes, MFA login challenges, and session last-used tracking; PostgreSQL verified at `0006 (head)`.
+- [x] Added authenticator-app TOTP setup with QR/manual key, password confirmation, code verification, and encrypted secret storage.
+- [x] Added ten one-time recovery codes stored only as HMAC hashes, remaining-code count, and password-confirmed regeneration.
+- [x] Enforced MFA during web and mobile login through five-minute, single-use server-side challenges before access/refresh tokens are issued.
+- [x] Added one-time recovery-code login consumption and rejection of reused recovery codes.
+- [x] Added password change with current-password verification, different-password enforcement, and all-session revocation.
+- [x] Added 2FA disable requiring current password plus authenticator code and revoking all active sessions.
+- [x] Added active-session listing with device/IP/timestamps, individual revocation, and revoke-all/sign-out-all controls.
+- [x] Added security overview cards for MFA state, active sessions, and recovery-code availability.
+- [x] Added backend security dependencies `pyotp`, `cryptography`, and `qrcode[pil]` to the pinned requirements.
+- [x] Passed complete backend suite (`11 passed`), frontend lint/build (`29/29` pages), mobile TypeScript, Expo Doctor (`18/18`), Settings HTTP 200, and protected API 401 without auth.
+- [x] Created a separate Owner/Admin Expo app inside the existing workspace at `admin-mobile/`; the Collection Agent app remains isolated at `mobile/`.
+- [x] Aligned the Owner app to Expo SDK 54, React Native 0.81.5, and current Expo Go compatibility.
+- [x] Added distinct zChit Owner identity and package IDs: `com.zchit.owner` for Android and iOS.
+- [x] Added encrypted owner access/refresh token storage with automatic rotating-refresh recovery and secure server logout.
+- [x] Enforced owner-only role validation after login so staff and collection-agent accounts cannot enter the Owner app.
+- [x] Added full owner MFA login using the existing authenticator/recovery-code challenge before session issuance.
+- [x] Built the live Owner operations dashboard with today/month collections, active members/schemes, pending KYC, auction attention, 14-day chart, and recent receipts.
+- [x] Added a complete sectioned owner drawer for Dashboard, Members, Chits, Collections, Advances, Auctions, Agents, Agents Tracking, Employees, Payroll, Reports, Company, Users & Roles, Audit, and Security.
+- [x] Connected every Owner app monitoring module to its verified existing company-isolated backend endpoint with pull-to-refresh and readable live cards; no sample data is used.
+- [x] Added separate `admin-mobile/.env` LAN API configuration and ignored it from source control.
+- [x] Passed Owner app TypeScript, Expo public config, and Expo Doctor (`18/18`).
+- [ ] Add native create/edit/approval workflows to Owner modules incrementally; current `admin-mobile` scope is secure live monitoring while full administration remains available in the web console.
+- [x] Replaced generic Owner monitoring for Agents Tracking with a dedicated native map: current markers, selected route polyline, shift/check-out times, GPS coordinates, point counts, and 15-second refresh.
+- [x] Added dedicated native Reports with date filtering plus CSV and PDF generation/sharing.
+- [x] Added dedicated native Security with session listing/revocation, revoke-all, MFA setup/confirm/recovery/disable, and password change.
+- [x] Added native owner create forms for members, chit groups, advances, payroll runs, collection agents, employees, manual collections, and auctions.
+- [x] Added native record details for members, chits, collections, and employees with related financial/ledger/reconciliation/salary/document data.
+- [x] Added member/employee archive/restore and KYC actions, collection refund/reversal, and scheme cancellation.
+- [x] Added advance allocation, auction approve/bid/cancel/pay-with-proof, payroll day adjustment/approve/pay-with-proof, user activate/deactivate/password reset, and agent assignment controls.
+- [x] Added employee salary structure and evidence upload controls.
+- [x] Added scheme enrollment update, eligible replacement approval, and final closure controls.
+- [x] Added native Company editing and branch create/delete plus Users & Roles creation.
+- [x] Installed and integrated native map, document picker, filesystem, sharing, and PDF modules.
+- [x] Passed Owner app TypeScript, Expo Doctor (`18/18`), and complete backend regression (`11 passed`) after workflow expansion.
+- [ ] Final Owner app hardening: replace remaining raw-ID fields with searchable selectors, visually test every native screen/action on device, and correct any payload-specific runtime issues before release-ready status.
+- [x] Replaced all remaining single entity IDs with searchable live selectors for schemes, members, schedules, employees, roles, bidders, and payroll employees.
+- [x] Replaced comma-separated scheme/member assignment and enrollment IDs with searchable multi-selectors.
+- [x] Added native Android bundle export validation; Hermes bundle generated successfully from all Owner app modules.
+- [x] Owner app is running separately on Expo/Metro port `8082` at `exp://192.168.0.182:8082`; Agent app remains isolated on port `8081`.
+- [x] Final automated validation: Owner TypeScript passed, Expo Doctor `18/18`, Android bundle succeeded, backend `11 passed`.
+- [ ] Complete physical-device visual/runtime review for every Owner screen and mutation workflow, then correct any device-only UX or payload issues before release.
+- [x] Fixed Owner agent assignment editing to load and preselect existing saved scheme/member assignments from the backend before showing the form.
+- [x] Added current assignment counts and disabled Save until the owner makes a real change, preventing duplicate reassignment confusion and accidental empty replacement.
+- [x] Passed Owner TypeScript and focused agent assignment lifecycle (`1 passed`) after the assignment correction.
+- [x] Verified persisted assignment data for agent vasanth: whole scheme `gold` and individual member `Subburaj Thiyagarajan`.
+- [x] Extended owner assignment APIs to return readable assigned scheme/member details in both the agent register and assignment detail response.
+- [x] Added visible assignment chips to each web agent row and a readable Current assignments summary inside the web assignment sheet.
+- [x] Web assignment checkboxes now open prechecked from saved assignments and reload the agent register after saving.
+- [x] Owner app assignment cards now show readable saved scheme/member names above preselected searchable controls.
+- [x] Added backend assertions for readable assignment details; focused agent test, frontend lint, and Owner TypeScript passed.
+- [x] Replaced the Owner app basic member creator with a complete native Add/Edit member workflow matching the web contract.
+- [x] Added personal/KYC fields: name, DOB, gender, mobile, email, Aadhaar, PAN, internal notes, and risk flags.
+- [x] Added complete nominee, residential address, bank-account, and dynamic multi-reference sections.
+- [x] Added member photo, Aadhaar evidence, PAN evidence, cancelled cheque, and bank-statement selection/upload during create or edit.
+- [x] Added direct individual document upload/replacement controls in member details.
+- [x] Member create/update occurs first, followed by authenticated private multipart upload to the exact member; optional Aadhaar remains unchanged during edit when blank.
+- [x] Connected complete-profile Edit from member details while preserving financial summary, ledger, KYC, and archive/restore actions.
+- [x] Passed Owner TypeScript, Expo Doctor (`18/18`), Android Hermes bundle, and backend member/document lifecycle (`1 passed`).
+- [x] Replaced generic Chit JSON detail with a dedicated complete native Chit Group screen.
+- [x] Added scheme overview/configuration, capacity, commission, grace/late-fee rules, auction schedule, discount range, and live totals.
+- [x] Added full installment schedule with payable/receivable amounts and auction-winner/status visibility per row.
+- [x] Added complete enrolled-member cards with enrollment periods, paid/outstanding totals, and expandable full installment ledgers.
+- [x] Each member ledger shows installment status, payable, paid, balance, payment date/mode/reference, and auction-settled gross/net payouts.
+- [x] Added complete auction lifecycle cards showing winner, bid, discount, commission, gross payout, settled installment, net payout, acknowledgement, approval, payment, proof, and voucher data.
+- [x] Added full collection/payment timeline, member replacement history/consents/approval state, and final reconciliation detail.
+- [x] Preserved native enrollment, transfer approval, cancellation, and closure management controls inside the complete Chit view.
+- [x] Passed Owner TypeScript, Android Hermes bundle, and backend Chit lifecycle (`1 passed`).
+- [x] Completed a code-level module-by-module parity audit between the web console, Owner mobile app, backend routes, and schemas.
+- [x] Fixed unsafe Chit enrollment replacement by preloading/preselecting all current active members before the replace-all API can save.
+- [x] Removed bulk replacement approval and added per-transfer balance-gated review/confirmation; added complete replacement request with both acknowledgements and signed consent uploads.
+- [x] Replaced automatic KYC verification with explicit Aadhaar/PAN/Bank verified/rejected/not-applicable review and rejection reason.
+- [x] Replaced all-permissions role creation with explicit least-privilege permission selection.
+- [x] Fixed expired-refresh handling to clear encrypted credentials and immediately return the Owner app to login; FastAPI validation arrays are now readable.
+- [x] Added the missing global immutable Ledger module with scheme/member/date filters, debit/credit totals, balance difference, source references, and reversal lineage.
+- [x] Replaced generic Collections with complete filters, totals, CSV/PDF, receipt detail access, and overdue ageing register.
+- [x] Added full Chit schedule editing for dates/payable/receivable amounts so mobile-created groups can become auction-ready.
+- [x] Added auction bid-history viewing, authenticated settlement-proof download, voucher PDF, and paid-auction reversal.
+- [x] Added authenticated private file viewing/sharing for member documents, employee evidence, payroll proof, and replacement consents.
+- [x] Replaced the partial Employee creator with full native Add/Edit across personal, employment, address, emergency, nominee, bank, statutory, tax, and initial salary fields.
+- [x] Added dedicated payroll detail with complete employee item/day/gross/deduction/net table, payment metadata, voucher, and proof.
+- [x] Completed Company parity: registered address view/edit, logo upload, full branch details, branch create/edit/delete, and active/inactive state.
+- [x] Completed Reports parity: type/scheme/member/mode/date filters, clear action, type summaries, full timeline, complete CSV and PDF columns.
+- [x] Completed Audit parity: action/entity/date filters and visible old/new structured values.
+- [x] Scoped advance, collection, auction winner, and bidder selectors to active members of the selected scheme.
+- [x] Final parity validation passed: Owner TypeScript, Expo Doctor `18/18`, Android Hermes bundle, backend `11 passed`, frontend lint.
+- [ ] Platform limitations shared with web/backend: no end-to-end notifications API/screen exists; no owner agent-account status endpoint exists; some web header search/profile controls remain decorative.
+- [x] Removed the remaining decorative header controls by implementing company-scoped global search, live operational notifications, real owner identity, and working Profile/Security navigation.
+- [x] Added `GET /api/v1/dashboard/search` for members, chit groups, employees, and receipts with readable navigable results.
+- [x] Added `GET /api/v1/dashboard/notifications` using live pending KYC, pending/approved auctions, and recent audit activity with unread attention count.
+- [x] Web header search now debounces live queries and opens navigable result cards; owner account displays authenticated email/role.
+- [x] Web Profile opens Company Profile, Settings opens Security Settings, and Logout remains server-revoked.
+- [x] Web notification bell now opens a live dropdown with operational items and routes; unread dot appears only when attention items exist.
+- [x] Replaced the Owner app diamond placeholder with a real drawn bell icon and live notification panel polling every 30 seconds.
+- [x] Owner drawer identity, Profile, and Security Settings are now explicit working navigation controls.
+- [x] Added owner agent activate/deactivate endpoint that synchronizes CollectionAgent and User status, blocks deactivation during active shift, and audits changes.
+- [x] Added activate/deactivate controls in both web Agents and Owner mobile Agents modules.
+- [x] Validated focused agent/search/notification lifecycle (`1 passed`), frontend lint/build (`29/29`), Owner TypeScript, Expo Doctor (`18/18`), and Android Hermes bundle.
+- [x] Added additive Alembic revision `0007` with company communication settings and persistent owner in-app notifications; database verified at `0007 (head)`.
+- [x] Added persistent notification read/unread state, unread count, individual mark-read, mark-all-read, company/user isolation, entity links, and timestamps.
+- [x] Payment collections now create persistent owner notifications for manual web collections, agent Regular/Late collections, agent Advance collections, and owner-recorded advance receipts.
+- [x] Added ZeptoMail admin payment email after successful collection commit with member, scheme, amount, mode, receipt, and source.
+- [x] Communication provider failures are logged and never roll back a successfully committed financial transaction.
+- [x] Added company-scoped Communication Settings APIs with configurable admin email and payment-email enable switch.
+- [x] Added Meta WhatsApp Cloud API configuration: enable switch, Phone Number ID, WhatsApp Business Account ID, Graph API version, and write-only access token.
+- [x] Meta access tokens are encrypted at rest, never returned to web/mobile, and blank token updates preserve the existing encrypted token.
+- [x] WhatsApp cannot be enabled until Phone Number ID and an access token are configured.
+- [x] Added Communication & Notifications settings to both web Security Settings and Owner mobile Security.
+- [x] Switched web and Owner mobile bells to persistent notification feed with read-state updates before navigation.
+- [x] Added communication integration tests for encrypted token storage, safe API response, credential validation, persistent notification read state, email dispatch hooks, and collection notifications.
+- [x] Final validation passed: backend `12 passed`, Alembic `0007`, frontend lint/build (`29/29`), Owner TypeScript, Expo Doctor `18/18`, Android Hermes bundle.
+- [ ] Add Meta WhatsApp templates and live send/test endpoints after credentials are entered and verified, as explicitly planned.

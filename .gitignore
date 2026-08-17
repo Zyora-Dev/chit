@@ -1,0 +1,36 @@
+# Secrets and machine-local environment
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies and generated output
+**/node_modules/
+**/.next/
+**/.expo/
+**/dist/
+**/build/
+**/coverage/
+**/android/
+**/ios/
+
+# Python environments and caches
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/*.py[cod]
+
+# Runtime data and private uploads
+**/uploads/
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+
+# Keys, certificates, logs, and OS files
+**/*.pem
+**/*.key
+**/*.p8
+**/*.p12
+**/*.jks
+**/*.log
+**/.DS_Store
+**/*.tsbuildinfo

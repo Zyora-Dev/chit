@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "zChit Agent",
+    "slug": "zchit-agent",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/zchit-agent.png",
+    "userInterfaceStyle": "light",
+    "plugins": [
+        [
+          "expo-splash-screen",
+          {
+            "image": "./assets/zchit-agent.png",
+            "imageWidth": 180,
+            "resizeMode": "contain",
+            "backgroundColor": "#047857"
+          }
+        ],
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "zChit uses your location for attendance, assigned collections, and collection receipts.",
+          "locationAlwaysAndWhenInUsePermission": "Allow zChit to track your route while an active collection shift continues in the background."
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.zchit.agent",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "zChit uses your location for attendance, assigned collections, and collection receipts.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow zChit to track your route while an active collection shift continues in the background.",
+        "UIBackgroundModes": ["location"]
+      }
+    },
+    "android": {
+      "package": "com.zchit.agent",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#047857",
+        "foregroundImage": "./assets/zchit-agent.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/zchit-agent.png"
+    }
+  }
+}

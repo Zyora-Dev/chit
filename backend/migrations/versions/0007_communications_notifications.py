@@ -1,0 +1,12 @@
+"""Communication settings and persistent in-app notifications.
+Revision ID: 0007
+Revises: 0006
+"""
+from alembic import op
+import sqlalchemy as sa
+revision="0007";down_revision="0006";branch_labels=None;depends_on=None
+def upgrade():
+    op.create_table("communication_settings",sa.Column("id",sa.Integer(),primary_key=True),sa.Column("company_id",sa.Integer(),sa.ForeignKey("companies.id",ondelete="CASCADE"),nullable=False),sa.Column("admin_email",sa.String(320)),sa.Column("email_payment_notifications",sa.Boolean(),server_default=sa.text("true"),nullable=False),sa.Column("whatsapp_enabled",sa.Boolean(),server_default=sa.text("false"),nullable=False),sa.Column("whatsapp_phone_number_id",sa.String(100)),sa.Column("whatsapp_business_account_id",sa.String(100)),sa.Column("whatsapp_access_token_encrypted",sa.Text()),sa.Column("whatsapp_api_version",sa.String(20),server_default="v23.0",nullable=False),sa.Column("updated_by_user_id",sa.Integer(),sa.ForeignKey("users.id",ondelete="SET NULL")),sa.Column("created_at",sa.DateTime(timezone=True),server_default=sa.func.now(),nullable=False),sa.Column("updated_at",sa.DateTime(timezone=True),server_default=sa.func.now(),nullable=False),sa.UniqueConstraint("company_id",name="uq_communication_company"));op.create_index("ix_communication_settings_company_id","communication_settings",["company_id"])
+    op.create_table("in_app_notifications",sa.Column("id",sa.Integer(),primary_key=True),sa.Column("company_id",sa.Integer(),sa.ForeignKey("companies.id",ondelete="CASCADE"),nullable=False),sa.Column("user_id",sa.Integer(),sa.ForeignKey("users.id",ondelete="CASCADE")),sa.Column("notification_type",sa.String(50),nullable=False),sa.Column("title",sa.String(250),nullable=False),sa.Column("message",sa.String(1000),nullable=False),sa.Column("href",sa.String(500)),sa.Column("entity_type",sa.String(80)),sa.Column("entity_id",sa.Integer()),sa.Column("read_at",sa.DateTime(timezone=True)),sa.Column("created_at",sa.DateTime(timezone=True),server_default=sa.func.now(),nullable=False));op.create_index("ix_in_app_notifications_company_id","in_app_notifications",["company_id"]);op.create_index("ix_in_app_notifications_user_id","in_app_notifications",["user_id"]);op.create_index("ix_in_app_notifications_notification_type","in_app_notifications",["notification_type"]);op.create_index("ix_in_app_notifications_created_at","in_app_notifications",["created_at"])
+def downgrade():
+    op.drop_table("in_app_notifications");op.drop_table("communication_settings")
