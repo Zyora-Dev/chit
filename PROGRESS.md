@@ -1,5 +1,8 @@
 # zChit Progress
 
+- [x] zChit Owner APK workflow run `32020227510` completed successfully; exact Owner artwork checksum, production API URL, TypeScript, Android prebuild, Gradle release build, and artifact upload all passed.
+- [x] Published zChit Owner v1.0.0 at `https://chit.zyora.site/download/owner/` with attachment filename `zChit-Owner-1.0.0.apk`; versioned path is `/download/owner/zChit-Owner-1.0.0.apk`. Agent `/downlod/agent/` remains verified and unchanged.
+- [x] Owner public APK verification: `Content-Length: 57,907,692`, Android APK MIME, resumable byte ranges return `206`, and end-to-end SHA-256 matches GitHub Actions: `e24279a1d8d1fe4f1dade0061573ba3daaed1d2ba528c674a166637b4f669236`.
 - [x] Prepared zChit Owner Android v1.0.0 (`com.zchit.owner`, versionCode 1) using the supplied 512×512 `assets/zchit-owner.png` byte-for-byte; packaged checksum remains `39eca9774f56d19be70efa8f99e7519b73cf81c487fab3382f0bda36900decd7`.
 - [x] Owner launcher artwork is not padded, bordered, or placed in Android's inset foreground safe zone: the exact artwork is the full adaptive background layer and the required foreground is fully transparent. Generated Android adaptive XML/resources inspected successfully; standard icon, splash, and favicon also use the exact artwork. Fixed duplicate `plugins` key that previously disabled the configured splash plugin.
 - [x] Added checksum-enforced `.github/workflows/build-zchit-owner-android.yml`; local Owner TypeScript, Expo config, Expo Doctor `18/18`, workflow YAML, and Android prebuild pass. Pushed commit `4169d87`; Owner APK workflow run `32020227510` is in progress.
