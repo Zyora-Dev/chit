@@ -33,7 +33,7 @@ async def test_agent_assignment_shift_and_collection(client,monkeypatch):
         assigned=await client.put(f"/api/v1/admin/collection-agents/{agent_id}/assignments",headers=oh,json={"group_ids":[],"enrollment_ids":[enrollment_id]});assert assigned.status_code==200
         saved_assignments=(await client.get(f"/api/v1/admin/collection-agents/{agent_id}/assignments",headers=oh)).json();assert saved_assignments["enrollment_ids"]==[enrollment_id] and saved_assignments["members"][0]["member_name"]=="Assigned Member" and saved_assignments["members"][0]["scheme_name"]=="Agent Scheme"
         agent_register=(await client.get("/api/v1/admin/collection-agents",headers=oh)).json();assert agent_register[0]["assigned_members"][0]["member_name"]=="Assigned Member"
-        login=await client.post("/api/v1/auth/login",json={"email":"field-agent@example.com","password":"StrongPassword123!"});assert login.status_code==200;ah={"Authorization":f"Bearer {login.json()['access_token']}"}
+        login=await client.post("/api/v1/auth/login",json={"email":"field-agent@example.com","password":"StrongPassword123!"});assert login.status_code==200;agent_tokens=login.json();ah={"Authorization":f"Bearer {agent_tokens['access_token']}"}
         blocked=await client.get("/api/v1/members",headers=ah);assert blocked.status_code==403
         profile=await client.get("/api/v1/agent/profile",headers=ah);assert profile.status_code==200 and profile.json()["employee_code"]=="EMP-AGENT" and profile.json()["department"]=="Collection"
         checkin=await client.post("/api/v1/agent/check-in",headers=ah,json={"latitude":8.1833,"longitude":77.4119,"accuracy_meters":10});assert checkin.status_code==200
@@ -55,6 +55,9 @@ async def test_agent_assignment_shift_and_collection(client,monkeypatch):
         notifications=await client.get("/api/v1/dashboard/notifications",headers=oh);assert notifications.status_code==200 and "unread_count" in notifications.json() and isinstance(notifications.json()["items"],list)
         checkout=await client.post("/api/v1/agent/check-out",headers=ah,json={"latitude":8.1835,"longitude":77.4121});assert checkout.status_code==200
         deactivated=await client.put(f"/api/v1/admin/collection-agents/{agent_id}/status",headers=oh,json={"is_active":False});assert deactivated.status_code==200 and deactivated.json()["is_active"] is False
+        blocked_login=await client.post("/api/v1/auth/login",json={"email":"field-agent@example.com","password":"StrongPassword123!"});assert blocked_login.status_code==401
+        blocked_access=await client.get("/api/v1/agent/profile",headers=ah);assert blocked_access.status_code==401
+        blocked_refresh=await client.post("/api/v1/auth/refresh",json={"refresh_token":agent_tokens["refresh_token"]});assert blocked_refresh.status_code==401
         reactivated=await client.put(f"/api/v1/admin/collection-agents/{agent_id}/status",headers=oh,json={"is_active":True});assert reactivated.status_code==200 and reactivated.json()["is_active"] is True
         after_checkout=await client.get("/api/v1/agent/collections",headers=ah);assert after_checkout.status_code==200
     finally:

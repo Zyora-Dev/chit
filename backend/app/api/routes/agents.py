@@ -1,7 +1,7 @@
 from datetime import UTC,date,datetime
 from decimal import Decimal
 from fastapi import APIRouter,Depends,HTTPException,Query,Request
-from sqlalchemy import func,select
+from sqlalchemy import func,select,update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.api.dependencies import get_current_user,require_owner
@@ -14,6 +14,7 @@ from app.models.chit import ChitAuction,ChitEnrollment,ChitGroup,ChitPayment,Chi
 from app.models.company import Company
 from app.models.employee import Employee
 from app.models.member import Member
+from app.models.session import AuthSession
 from app.models.user import User
 from app.schemas.agent import AgentAssignments,AgentCollectionCreate,AgentCreate,AgentStatusUpdate,LocationPoint
 from app.services.accounting import document_number,post_entries
@@ -49,7 +50,9 @@ async def update_agent_status(agent_id:int,payload:AgentStatusUpdate,request:Req
     company=await require_company(db,user.id);agent=await db.scalar(select(CollectionAgent).where(CollectionAgent.id==agent_id,CollectionAgent.company_id==company.id))
     if not agent:raise HTTPException(status_code=404,detail="Agent not found")
     if not payload.is_active and await active_shift(db,agent.id):raise HTTPException(status_code=409,detail="Check out the agent before deactivating the account")
-    account=await db.get(User,agent.user_id);agent.status="active" if payload.is_active else "inactive";account.is_active=payload.is_active;add_audit(db,company_id=company.id,user_id=user.id,action="activate" if payload.is_active else "deactivate",entity_type="collection_agent",entity_id=agent.id,description=f"{'Activated' if payload.is_active else 'Deactivated'} collection agent account",request=request,new_values={"is_active":payload.is_active});await db.commit();return {"status":agent.status,"is_active":account.is_active}
+    account=await db.get(User,agent.user_id);agent.status="active" if payload.is_active else "inactive";account.is_active=payload.is_active
+    if not payload.is_active:await db.execute(update(AuthSession).where(AuthSession.user_id==account.id,AuthSession.revoked_at.is_(None)).values(revoked_at=datetime.now(UTC)))
+    add_audit(db,company_id=company.id,user_id=user.id,action="activate" if payload.is_active else "deactivate",entity_type="collection_agent",entity_id=agent.id,description=f"{'Activated' if payload.is_active else 'Deactivated'} collection agent account",request=request,new_values={"is_active":payload.is_active});await db.commit();return {"status":agent.status,"is_active":account.is_active}
 @router.put("/admin/collection-agents/{agent_id}/assignments")
 async def assign(agent_id:int,payload:AgentAssignments,request:Request,user:User=Depends(require_owner),db:AsyncSession=Depends(get_db)):
     company=await require_company(db,user.id);agent=await db.scalar(select(CollectionAgent).where(CollectionAgent.id==agent_id,CollectionAgent.company_id==company.id))

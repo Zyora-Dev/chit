@@ -12,7 +12,7 @@ from app.models.user import User
 from app.schemas.users import PasswordReset,RoleCreate,UserCredentialCreate,UserStatus
 from app.services.audit import add_audit
 router=APIRouter(prefix="/api/v1/admin",tags=["Users & Roles"])
-PERMISSIONS={"dashboard.view":"Dashboard","members.view":"Members","members.manage":"Members","schemes.view":"Schemes","schemes.manage":"Schemes","collections.view":"Collections","collections.record":"Collections","collections.refund":"Collections","auctions.view":"Auctions","auctions.manage":"Auctions","employees.view":"Employees","employees.manage":"Employees","payroll.view":"Payroll","payroll.manage":"Payroll","agents.manage":"Collection Agents","ledger.view":"Accounting","audit.view":"Audit","company.manage":"Company"}
+PERMISSIONS={"dashboard.view":"Dashboard","members.view":"Members","members.manage":"Members","schemes.view":"Schemes","schemes.manage":"Schemes","collections.view":"Collections","collections.record":"Collections","collections.refund":"Collections","auctions.view":"Auctions","auctions.manage":"Auctions","employees.view":"Employees","employees.manage":"Employees","payroll.view":"Payroll","payroll.manage":"Payroll","expenses.view":"Expenses","expenses.manage":"Expenses","agents.manage":"Collection Agents","ledger.view":"Accounting","audit.view":"Audit","company.manage":"Company"}
 AGENT_CODES=["agent.check_in","agent.location","agent.assignments","agent.collect","agent.receipt"]
 async def ensure_permissions(db):
     existing={p.code:p for p in (await db.execute(select(Permission))).scalars().all()}

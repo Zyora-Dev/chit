@@ -13,6 +13,7 @@ from app.api.routes.companies import router as companies_router
 from app.api.routes.communications import router as communications_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.employees import router as employees_router
+from app.api.routes.expenses import router as expenses_router
 from app.api.routes.health import router as health_router
 from app.api.routes.members import router as members_router
 from app.api.routes.payroll import router as payroll_router
@@ -35,6 +36,7 @@ app.include_router(companies_router)
 app.include_router(communications_router)
 app.include_router(dashboard_router)
 app.include_router(employees_router)
+app.include_router(expenses_router)
 app.include_router(health_router)
 app.include_router(members_router)
 app.include_router(payroll_router)

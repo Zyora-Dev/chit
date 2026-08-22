@@ -250,7 +250,9 @@ async def reset_password(
 async def refresh_session(payload:RefreshRequest,request:Request,db:AsyncSession=Depends(get_db)):
     session=await db.scalar(select(AuthSession).where(AuthSession.token_hash==token_digest(payload.refresh_token)))
     if not session or session.revoked_at or session.expires_at<=datetime.now(UTC): raise HTTPException(status_code=401,detail="Invalid refresh token")
-    user=await db.get(User,session.user_id);session.revoked_at=datetime.now(UTC);session.last_used_at=datetime.now(UTC);refresh=issue_refresh_session(db,user,request);await db.commit();return TokenResponse(access_token=create_access_token(user.id,user.role),refresh_token=refresh)
+    user=await db.get(User,session.user_id)
+    if not user or not user.is_active:raise HTTPException(status_code=401,detail="Account is inactive")
+    session.revoked_at=datetime.now(UTC);session.last_used_at=datetime.now(UTC);refresh=issue_refresh_session(db,user,request);await db.commit();return TokenResponse(access_token=create_access_token(user.id,user.role),refresh_token=refresh)
 
 
 @router.post("/logout",response_model=MessageResponse)
