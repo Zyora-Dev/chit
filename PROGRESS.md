@@ -1,5 +1,9 @@
 # zChit Progress
 
+- [x] Added Expenses to the Owner app with Operations drawer navigation, total and category summaries, pull-to-refresh, search/category/payment/date filters, company-wide or branch assignment, create/edit/confirmed-delete workflows, and filtered CSV/PDF sharing.
+- [x] Owner Expenses validation passes: TypeScript reports no errors, all touched files have no VS Code diagnostics, and a fresh production-configured Android Hermes export succeeds with 652 modules and a 2.18 MB bundle.
+- [ ] A new Owner APK must be built, physically tested, and published before the production download includes Expenses.
+- [ ] Expo Doctor is currently 17/18 for both apps due only to patch drift: Agent needs `expo ~54.0.37`; Owner needs `expo ~54.0.37` and `expo-file-system ~19.0.24`. Physical-device end-to-end review of both production APKs is still required before calling the mobile release fully complete.
 - [x] Added standalone company-scoped Expenses with Food, Petrol allowance, Snacks, Broadband bill, Courier bill, Recharge, and Others categories; records include date, amount, payee, branch, payment mode/reference, description, notes, creator, and audit history.
 - [x] Added `/dashboard/expenses` with create/edit/confirmed-delete workflows, responsive table/mobile records, search, category/payment/date filters, filtered totals, CSV download, browser Print/PDF, and dashboard navigation. Added `expenses.view` and `expenses.manage` to Users & Roles with server-side owner/staff authorization and staff branch scoping.
 - [x] Added additive Alembic revision `0009`; local and production PostgreSQL are at `0009 (head)`. Expense permission/CRUD/filter/tenant-isolation test passes (`1 passed`); frontend diagnostics, ESLint, and production build pass with 30 routes.

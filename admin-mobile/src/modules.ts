@@ -9,6 +9,7 @@ export const modules: Record<Exclude<Screen,"dashboard">,ModuleConfig> = {
   advances:{label:"Advance payments",icon:"↗",endpoint:"/api/v1/advance-payments",subtitle:"Advance receipts and allocations"},
   auctions:{label:"Auctions",icon:"◆",endpoint:"/api/v1/chits/auctions/all",subtitle:"Bids, winners and payouts"},
   ledger:{label:"Ledger",icon:"▤",endpoint:"/api/v1/chits/ledger/entries",subtitle:"Immutable debit and credit entries"},
+  expenses:{label:"Expenses",icon:"₹",endpoint:"/api/v1/expenses",collectionKey:"items",subtitle:"Business spending and receipts"},
   agents:{label:"Agents",icon:"●",endpoint:"/api/v1/admin/collection-agents",subtitle:"Accounts, shifts and status"},
   tracking:{label:"Agents Tracking",icon:"⌖",endpoint:"/api/v1/admin/collection-agents",subtitle:"Live field locations"},
   employees:{label:"Employees",icon:"♟",endpoint:"/api/v1/employees?page_size=100",collectionKey:"items",subtitle:"Employee master and KYC"},
@@ -22,7 +23,7 @@ export const modules: Record<Exclude<Screen,"dashboard">,ModuleConfig> = {
 
 export const menuSections: {title:string;items:Screen[]}[] = [
   {title:"OVERVIEW",items:["dashboard"]},
-  {title:"OPERATIONS",items:["members","chits","collections","advances","auctions","ledger"]},
+  {title:"OPERATIONS",items:["members","chits","collections","advances","auctions","ledger","expenses"]},
   {title:"FIELD TEAM",items:["agents","tracking"]},
   {title:"WORKFORCE",items:["employees","payroll"]},
   {title:"MANAGEMENT",items:["reports","company","users","audit","security"]},

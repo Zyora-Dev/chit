@@ -32,7 +32,7 @@ export async function clearTokens() {
 export async function authRequest<T>(path: string, init: RequestInit = {}, access?: string | null, retry = true): Promise<T> {
   const token = access ?? await SecureStore.getItemAsync(ACCESS_KEY);
   const response = await fetch(`${API_URL}${path}`, { ...init, headers: { "Content-Type": "application/json", ...(init.headers ?? {}), Authorization: `Bearer ${token}` } });
-  if (response.ok) return response.json();
+  if (response.ok) return response.status === 204 ? undefined as T : response.json();
   if (response.status === 401 && retry) {
     const refresh = await SecureStore.getItemAsync(REFRESH_KEY);
     if (refresh) {

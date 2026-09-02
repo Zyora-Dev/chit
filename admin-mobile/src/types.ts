@@ -1,4 +1,4 @@
-export type Screen = "dashboard" | "members" | "chits" | "collections" | "advances" | "auctions" | "ledger" | "agents" | "tracking" | "employees" | "payroll" | "reports" | "company" | "users" | "audit" | "security";
+export type Screen = "dashboard" | "members" | "chits" | "collections" | "advances" | "auctions" | "ledger" | "expenses" | "agents" | "tracking" | "employees" | "payroll" | "reports" | "company" | "users" | "audit" | "security";
 
 export type DashboardSummary = {
   today_collections: string;
