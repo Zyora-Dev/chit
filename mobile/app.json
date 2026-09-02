@@ -23,7 +23,8 @@
           "locationWhenInUsePermission": "zChit uses your location for attendance, assigned collections, and collection receipts.",
           "locationAlwaysAndWhenInUsePermission": "Allow zChit to track your route while an active collection shift continues in the background."
         }
-      ]
+      ],
+      "./plugins/withPlayStoreSigning"
     ],
     "ios": {
       "supportsTablet": false,
