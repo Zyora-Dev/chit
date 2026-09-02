@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC,date,datetime,timedelta
 import pytest,pytest_asyncio
 from httpx import ASGITransport,AsyncClient
 from sqlalchemy import delete,select
@@ -36,15 +36,22 @@ async def test_agent_assignment_shift_and_collection(client,monkeypatch):
         login=await client.post("/api/v1/auth/login",json={"email":"field-agent@example.com","password":"StrongPassword123!"});assert login.status_code==200;agent_tokens=login.json();ah={"Authorization":f"Bearer {agent_tokens['access_token']}"}
         blocked=await client.get("/api/v1/members",headers=ah);assert blocked.status_code==403
         profile=await client.get("/api/v1/agent/profile",headers=ah);assert profile.status_code==200 and profile.json()["employee_code"]=="EMP-AGENT" and profile.json()["department"]=="Collection"
-        checkin=await client.post("/api/v1/agent/check-in",headers=ah,json={"latitude":8.1833,"longitude":77.4119,"accuracy_meters":10});assert checkin.status_code==200
+        current_gps={"accuracy_meters":10,"device_recorded_at":datetime.now(UTC).isoformat(),"is_mocked":False}
+        missing_proof=await client.post("/api/v1/agent/check-in",headers=ah,json={"latitude":8.1833,"longitude":77.4119});assert missing_proof.status_code==422
+        zero_position=await client.post("/api/v1/agent/check-in",headers=ah,json={"latitude":0,"longitude":0,**current_gps});assert zero_position.status_code==422
+        stale_position=await client.post("/api/v1/agent/check-in",headers=ah,json={"latitude":8.1833,"longitude":77.4119,"accuracy_meters":10,"device_recorded_at":(datetime.now(UTC)-timedelta(minutes=2)).isoformat(),"is_mocked":False});assert stale_position.status_code==422
+        future_position=await client.post("/api/v1/agent/check-in",headers=ah,json={"latitude":8.1833,"longitude":77.4119,"accuracy_meters":10,"device_recorded_at":(datetime.now(UTC)+timedelta(minutes=1)).isoformat(),"is_mocked":False});assert future_position.status_code==422
+        mocked_position=await client.post("/api/v1/agent/check-in",headers=ah,json={"latitude":8.1833,"longitude":77.4119,**current_gps,"is_mocked":True});assert mocked_position.status_code==422
+        inaccurate_position=await client.post("/api/v1/agent/check-in",headers=ah,json={"latitude":8.1833,"longitude":77.4119,**current_gps,"accuracy_meters":101});assert inaccurate_position.status_code==422
+        checkin=await client.post("/api/v1/agent/check-in",headers=ah,json={"latitude":8.1833,"longitude":77.4119,**current_gps});assert checkin.status_code==200
         blocked_deactivate=await client.put(f"/api/v1/admin/collection-agents/{agent_id}/status",headers=oh,json={"is_active":False});assert blocked_deactivate.status_code==409
         tasks=await client.get("/api/v1/agent/assignments",headers=ah);assert tasks.status_code==200 and len(tasks.json())==1
-        collection=await client.post("/api/v1/agent/collections",headers=ah,json={"enrollment_id":enrollment_id,"schedule_id":schedule_id,"collection_type":"regular","amount_type":"partial","amount":2000,"payment_mode":"cash","latitude":8.1834,"longitude":77.4120});assert collection.status_code==201 and collection.json()["receipt_number"]
-        installment_advance=await client.post("/api/v1/agent/collections",headers=ah,json={"enrollment_id":enrollment_id,"schedule_id":future_schedule_id,"collection_type":"advance","amount_type":"partial","amount":1000,"payment_mode":"upi","reference_number":"UPI-INST-ADV","latitude":8.1834,"longitude":77.4120});assert installment_advance.status_code==201
+        collection=await client.post("/api/v1/agent/collections",headers=ah,json={"enrollment_id":enrollment_id,"schedule_id":schedule_id,"collection_type":"regular","amount_type":"partial","amount":2000,"payment_mode":"cash","latitude":8.1834,"longitude":77.4120,**current_gps});assert collection.status_code==201 and collection.json()["receipt_number"]
+        installment_advance=await client.post("/api/v1/agent/collections",headers=ah,json={"enrollment_id":enrollment_id,"schedule_id":future_schedule_id,"collection_type":"advance","amount_type":"partial","amount":1000,"payment_mode":"upi","reference_number":"UPI-INST-ADV","latitude":8.1834,"longitude":77.4120,**current_gps});assert installment_advance.status_code==201
         refreshed=(await client.get("/api/v1/agent/assignments",headers=ah)).json();future_row=next(item for item in refreshed[0]["installments"] if item["schedule_id"]==future_schedule_id);assert future_row["status"]=="partial" and float(future_row["paid_amount"])==1000
         report=(await client.get("/api/v1/chits/collections/report",headers=oh)).json();assert any(item["receipt_number"]==installment_advance.json()["receipt_number"] and item["installment_number"]==2 for item in report["rows"])
         advances=(await client.get("/api/v1/advance-payments",headers=oh)).json();allocated=next(item for item in advances if item["reference_number"]=="UPI-INST-ADV");assert allocated["status"]=="allocated" and float(allocated["allocated_amount"])==1000 and float(allocated["available_amount"])==0
-        advance=await client.post("/api/v1/agent/collections",headers=ah,json={"enrollment_id":enrollment_id,"schedule_id":None,"collection_type":"advance","amount_type":"partial","amount":1000,"payment_mode":"upi","reference_number":"UPI-AGT","latitude":8.1834,"longitude":77.4120});assert advance.status_code==201
+        advance=await client.post("/api/v1/agent/collections",headers=ah,json={"enrollment_id":enrollment_id,"schedule_id":None,"collection_type":"advance","amount_type":"partial","amount":1000,"payment_mode":"upi","reference_number":"UPI-AGT","latitude":8.1834,"longitude":77.4120,**current_gps});assert advance.status_code==201
         assert len(sent_emails)==3
         persistent=(await client.get("/api/v1/communications/notifications",headers=oh)).json();assert persistent["unread_count"]==3 and all(item["type"]=="payment" for item in persistent["items"])
         history=(await client.get("/api/v1/agent/collections",headers=ah)).json();assert history["today_count"]==3 and float(history["today_amount"])==4000 and len(history["rows"])==3;assert history["customers"][0]["name"]=="Assigned Member"
@@ -53,7 +60,7 @@ async def test_agent_assignment_shift_and_collection(client,monkeypatch):
         overall_advances=(await client.get(f"/api/v1/dashboard/overall-report?transaction_type=advance&date_from={date.today()}&date_to={date.today()}",headers=oh)).json();assert overall_advances["transaction_count"]==2 and float(overall_advances["total_inflow"])==2000
         search=(await client.get("/api/v1/dashboard/search?q=Assigned",headers=oh)).json();assert any(item["type"]=="member" and item["title"]=="Assigned Member" for item in search)
         notifications=await client.get("/api/v1/dashboard/notifications",headers=oh);assert notifications.status_code==200 and "unread_count" in notifications.json() and isinstance(notifications.json()["items"],list)
-        checkout=await client.post("/api/v1/agent/check-out",headers=ah,json={"latitude":8.1835,"longitude":77.4121});assert checkout.status_code==200
+        checkout=await client.post("/api/v1/agent/check-out",headers=ah,json={"latitude":8.1835,"longitude":77.4121,**current_gps});assert checkout.status_code==200
         deactivated=await client.put(f"/api/v1/admin/collection-agents/{agent_id}/status",headers=oh,json={"is_active":False});assert deactivated.status_code==200 and deactivated.json()["is_active"] is False
         blocked_login=await client.post("/api/v1/auth/login",json={"email":"field-agent@example.com","password":"StrongPassword123!"});assert blocked_login.status_code==401
         blocked_access=await client.get("/api/v1/agent/profile",headers=ah);assert blocked_access.status_code==401

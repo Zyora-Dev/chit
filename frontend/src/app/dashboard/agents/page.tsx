@@ -14,7 +14,7 @@ import { authenticatedApiRequest } from "@/lib/api";
 
 type Agent = {
   id: number; employee_id: number; employee_code: string; employee_name: string; email: string; status: string; shift_status: string;
-  shift_id: number | null; last_latitude: string | null; last_longitude: string | null; last_location_at: string | null;
+  shift_id: number | null; tracking_status: "off_duty" | "waiting" | "stale" | "live"; last_latitude: string | null; last_longitude: string | null; last_location_at: string | null;
   assigned_groups: { id: number; group_code: string; scheme_name: string }[];
   assigned_members: { enrollment_id: number; member_id: number; member_code: string; member_name: string; scheme_name: string }[];
 };
@@ -84,6 +84,7 @@ export default function AgentsPage() {
         <div className="min-w-0 flex-1"><p className="text-xs font-bold text-slate-950">{agent.employee_name}</p><p className="text-[9px] text-slate-500">{agent.employee_code} · {agent.email}</p><div className="mt-1 flex flex-wrap gap-1">{agent.assigned_groups.map((group) => <span key={`g-${group.id}`} className="rounded bg-emerald-50 px-1.5 py-0.5 text-[8px] font-semibold text-emerald-800">{group.scheme_name}</span>)}{agent.assigned_members.map((member) => <span key={`m-${member.enrollment_id}`} className="rounded bg-blue-50 px-1.5 py-0.5 text-[8px] font-semibold text-blue-800">{member.member_name} · {member.scheme_name}</span>)}{agent.assigned_groups.length === 0 && agent.assigned_members.length === 0 && <span className="text-[8px] text-slate-500">No assignments</span>}</div></div>
         <Badge className={agent.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}>{agent.status === "active" ? "Login active" : "Login blocked"}</Badge>
         <Badge className={agent.shift_status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-700"}>{agent.shift_status === "active" ? "Checked in" : "Not checked in"}</Badge>
+        {agent.shift_status === "active" && <Badge className={agent.tracking_status === "live" ? "bg-emerald-50 text-emerald-700" : agent.tracking_status === "stale" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-800"}>{agent.tracking_status === "live" ? "GPS live" : agent.tracking_status === "stale" ? "GPS stale" : "Waiting for GPS"}</Badge>}
         <Button type="button" variant="outline" size="sm" onClick={() => setSelected(agent)}>Assignment</Button>
         <AgentAccessDialog agent={agent} loading={updatingAgentId === agent.id} onConfirm={() => void updateStatus(agent)} />
         <Button nativeButton={false} variant="outline" size="sm" render={<Link href={`/dashboard/agents/map?agent=${agent.id}`} />}><MapPinned className="size-3.5" />View map</Button>

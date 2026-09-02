@@ -2,7 +2,7 @@
   "expo": {
     "name": "zChit Agent",
     "slug": "zchit-agent",
-    "version": "1.0.0",
+     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/zchit-agent.png",
     "userInterfaceStyle": "light",
@@ -36,7 +36,7 @@
     },
     "android": {
       "package": "com.zchit.agent",
-      "versionCode": 1,
+       "versionCode": 2,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",

@@ -109,6 +109,8 @@ class ChitPayment(Base):
     collection_location_text: Mapped[str | None] = mapped_column(String(300), nullable=True)
     collection_latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
     collection_longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6), nullable=True)
+    collection_accuracy_meters: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
+    collection_recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     payment_date: Mapped[date] = mapped_column(Date, nullable=False)
     payment_mode: Mapped[str] = mapped_column(String(30), nullable=False)
     reference_number: Mapped[str | None] = mapped_column(String(100), nullable=True)

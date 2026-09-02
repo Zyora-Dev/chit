@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { authenticatedApiRequest } from "@/lib/api";
 
-type Agent={id:number;employee_name:string;employee_code:string;shift_status:string;last_latitude:string|null;last_longitude:string|null;last_location_at:string|null};
+type Agent={id:number;employee_name:string;employee_code:string;shift_status:string;tracking_status:"off_duty"|"waiting"|"stale"|"live";last_latitude:string|null;last_longitude:string|null;last_location_at:string|null};
 type RouteData={shift?:{id:number;status:string;checked_in_at:string;checked_out_at:string|null}|null;points:{latitude:string;longitude:string;received_at:string}[]};
 
 export default function AgentMapPage(){

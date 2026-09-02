@@ -68,4 +68,5 @@ class AgentLocation(Base):
     longitude: Mapped[Decimal] = mapped_column(Numeric(9, 6), nullable=False)
     accuracy_meters: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
     device_recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_mocked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True, nullable=False)
