@@ -3,20 +3,216 @@ import * as Location from "expo-location";
 import * as SecureStore from "expo-secure-store";
 import * as TaskManager from "expo-task-manager";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Animated, AppState, KeyboardAvoidingView, Linking, Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Animated, AppState, KeyboardAvoidingView, Linking, Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ACCESS, REFRESH, ApiError, createAgentClient, createBackgroundStore } from "./agent-session";
+import { createWorkday, type Position } from "./agent-workday";
 
-const API_URL=process.env.EXPO_PUBLIC_API_URL??"http://127.0.0.1:8000";const ACCESS="zchit_agent_access";const REFRESH="zchit_agent_refresh";const PENDING_LOCATIONS="zchit_agent_pending_locations";const BACKGROUND_LOCATION_TASK="zchit-agent-background-location";
-type Position={latitude:number;longitude:number;accuracy_meters:number;device_recorded_at:string;is_mocked:boolean};
+const API_URL=process.env.EXPO_PUBLIC_API_URL??"http://127.0.0.1:8000";
+const BACKGROUND_LOCATION_TASK="zchit-agent-background-location";
+const storage = createBackgroundStore({
+    getItemAsync: SecureStore.getItemAsync,
+    deleteItemAsync: SecureStore.deleteItemAsync,
+    setItemAsync: (key: string, value: string) => SecureStore.setItemAsync(key, value, { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY }),
+});
+const api = createAgentClient(API_URL, storage);
+const workday = createWorkday(storage, api, {
+    available: () => TaskManager.isAvailableAsync(),
+    async start() {
+        if (!await TaskManager.isAvailableAsync()) throw new Error("Background tracking is unavailable. Use the installed zChit Agent app.");
+        if ((await Location.getBackgroundPermissionsAsync()).status !== "granted") throw new Error("Allow location all the time to continue your active shift.");
+        if (await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)) return;
+        await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+            accuracy: Location.Accuracy.High, timeInterval: 15000, distanceInterval: 0,
+            pausesUpdatesAutomatically: false, showsBackgroundLocationIndicator: true,
+            foregroundService: { notificationTitle: "zChit workday active", notificationBody: "Location is shared with your office until you check out.", notificationColor: "#047857", killServiceOnDestroy: false },
+        });
+    },
+    async stop() {
+        if (await TaskManager.isAvailableAsync() && await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)) await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+    },
+});
 function locationProof(location:Location.LocationObject):Position{if(location.mocked)throw new Error("Mock locations are not allowed.");if(location.coords.accuracy===null||location.coords.accuracy>100)throw new Error("GPS accuracy is too low. Move to an open area and try again.");return{latitude:location.coords.latitude,longitude:location.coords.longitude,accuracy_meters:location.coords.accuracy,device_recorded_at:new Date(location.timestamp).toISOString(),is_mocked:false};}
-async function pendingLocations(){const stored=await SecureStore.getItemAsync(PENDING_LOCATIONS);if(!stored)return[];try{return JSON.parse(stored) as Position[];}catch{return[];}}
-async function savePendingLocations(points:Position[]){if(points.length)await SecureStore.setItemAsync(PENDING_LOCATIONS,JSON.stringify(points.slice(-200)));else await SecureStore.deleteItemAsync(PENDING_LOCATIONS);}
-async function uploadLocation(point:Position,access:string){const response=await fetch(`${API_URL}/api/v1/agent/location`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${access}`},body:JSON.stringify(point)});if(!response.ok)throw new Error("Unable to upload location.");}
-async function queueLocation(point:Position){const points=await pendingLocations();points.push(point);await savePendingLocations(points);}
-async function flushLocations(access:string){const points=await pendingLocations();let uploaded=0;for(const point of points){try{await uploadLocation(point,access);uploaded++;}catch{break;}}if(uploaded)await savePendingLocations(points.slice(uploaded));}
-async function uploadOrQueueLocation(point:Position,access:string){try{await flushLocations(access);await uploadLocation(point,access);}catch{await queueLocation(point);}}
-TaskManager.defineTask(BACKGROUND_LOCATION_TASK,async({data,error})=>{if(error||!data)return;const access=await SecureStore.getItemAsync(ACCESS);if(!access)return;const locations=(data as {locations:Location.LocationObject[]}).locations;for(const location of locations){try{await uploadOrQueueLocation(locationProof(location),access);}catch{}}});
+TaskManager.defineTask(BACKGROUND_LOCATION_TASK,async({data,error})=>{if(error||!data)return;if(!await storage.getItemAsync(ACCESS))return;const locations=(data as {locations:Location.LocationObject[]}).locations;for(const location of locations){try{await workday.upload(locationProof(location));}catch{}}});
 type Screen="splash"|"gps"|"login"|"dashboard";type Installment={schedule_id:number;installment_number:number;due_date:string;payable_amount:string;paid_amount:string;balance_amount:string;status:"paid"|"partial"|"late_due"|"due"|"upcoming";collectable:boolean};type Assignment={enrollment_id:number;member_id:number;member_code:string;member_name:string;mobile_number:string;address:string;group_id:number;group_code:string;scheme_name:string;installments:Installment[]};type Receipt={receipt_number:string;amount:string;collection_type:string};type CollectionRow={id:string;payment_id:number|null;advance_id:number|null;member_id:number;member_name:string;member_code:string;scheme_name:string;installment_number:number|null;collection_type:"regular"|"late"|"advance";amount:string;payment_date:string;payment_mode:string;reference_number:string|null;receipt_number:string;status:string;created_at:string};type AgentProfile={agent_id:number;employee_id:number;employee_code:string;full_name:string;date_of_birth:string|null;gender:string|null;blood_group:string|null;mobile_number:string;personal_email:string|null;official_email:string|null;current_address:string;department:string;designation:string;employment_type:string;work_mode:string;joining_date:string;status:string;kyc_status:string;emergency_contact_name:string;emergency_contact_relationship:string;emergency_contact_mobile:string};type CustomerSuggestion={id:number;name:string;member_code:string};type CollectionHistoryData={rows:CollectionRow[];total_amount:string;total_count:number;today_amount:string;today_count:number;customers:CustomerSuggestion[]};
-export default function App(){const[screen,setScreen]=useState<Screen>("splash");const[token,setToken]=useState<string|null>(null);const[shiftActive,setShiftActive]=useState(false);const[agentName,setAgentName]=useState("");const[assignments,setAssignments]=useState<Assignment[]>([]);const[receipt,setReceipt]=useState<Receipt|null>(null);const[profile,setProfile]=useState<AgentProfile|null>(null);const[history,setHistory]=useState<CollectionHistoryData>({rows:[],total_amount:"0",total_count:0,today_amount:"0",today_count:0,customers:[]});const[error,setError]=useState("");const watch=useRef<Location.LocationSubscription|null>(null);const opacity=useRef(new Animated.Value(0)).current;useEffect(()=>{Animated.timing(opacity,{toValue:1,duration:650,useNativeDriver:true}).start();const timer=setTimeout(()=>void boot(),1900);return()=>clearTimeout(timer);},[]);useEffect(()=>{const sub=AppState.addEventListener("change",state=>{if(state==="active"&&screen!=="splash")void enforceGps();});return()=>sub.remove();},[screen,shiftActive]);useEffect(()=>{if(shiftActive&&token)void startTracking();else stopTracking();return stopTracking;},[shiftActive,token]);async function boot(){const enabled=await gpsReady();if(!enabled){setScreen("gps");return;}const saved=await SecureStore.getItemAsync(ACCESS);if(!saved){setScreen("login");return;}setToken(saved);try{const status=await api("/api/v1/agent/status",{},saved);setAgentName(status.employee_name);setShiftActive(status.shift_active);if(status.shift_active){const background=await Location.getBackgroundPermissionsAsync();if(background.status!=="granted"){setError("Allow location all the time to continue your active shift.");setScreen("gps");return;}const tasks=await api("/api/v1/agent/assignments",{},saved);setAssignments(tasks);await flushLocations(saved);}await Promise.all([loadHistory(saved),loadProfile(saved)]);setScreen("dashboard");}catch{await clearSession();setScreen("login");}}async function gpsReady(){const services=await Location.hasServicesEnabledAsync();const permission=await Location.getForegroundPermissionsAsync();return services&&permission.status==="granted";}async function enforceGps(){if(!await gpsReady()){setError("GPS and location permission are required.");setScreen("gps");return;}if(shiftActive){const background=await Location.getBackgroundPermissionsAsync();if(background.status!=="granted"){setError("Allow location all the time to continue your active shift.");setScreen("gps");return;}if(token)await flushLocations(token);}setError("");}async function requestGps(){const permission=await Location.requestForegroundPermissionsAsync();if(permission.status!=="granted"){setError("Location permission is required to use zChit Agent.");return;}if(!await Location.hasServicesEnabledAsync()){setError("Turn on device location services, then try again.");return;}if(shiftActive){const background=await Location.requestBackgroundPermissionsAsync();if(background.status!=="granted"){setError("Allow location all the time to continue your active shift.");return;}}setError("");setScreen(token?"dashboard":"login");}async function currentPosition():Promise<Position>{if(!await gpsReady())throw new Error("GPS must be enabled.");const location=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.High});return locationProof(location);}async function api(path:string,init:RequestInit={},access=token){const response=await fetch(`${API_URL}${path}`,{...init,headers:{"Content-Type":"application/json",...(init.headers??{}),Authorization:`Bearer ${access}`}});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail??"Request failed.");return body;}async function loadProfile(access=token){const data=await api("/api/v1/agent/profile",{},access);setProfile(data);return data;}async function refreshHome(){const status=await api("/api/v1/agent/status");setAgentName(status.employee_name);setShiftActive(status.shift_active);setAssignments(status.shift_active?await api("/api/v1/agent/assignments"):[]);await loadHistory();}async function loadHistory(access=token,query=""){const data=await api(`/api/v1/agent/collections${query}`,{},access);setHistory(data);return data;}async function finishLogin(body:{access_token:string;refresh_token?:string}){await SecureStore.setItemAsync(ACCESS,body.access_token);if(body.refresh_token)await SecureStore.setItemAsync(REFRESH,body.refresh_token);setToken(body.access_token);const status=await api("/api/v1/agent/status",{},body.access_token);setAgentName(status.employee_name);setShiftActive(status.shift_active);await Promise.all([loadHistory(body.access_token),loadProfile(body.access_token)]);setScreen("dashboard");}async function login(code:string,password:string){const response=await fetch(`${API_URL}/api/v1/auth/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:code.trim().toUpperCase(),password})});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail??"Unable to sign in.");if(body.mfa_required&&body.challenge_token)return body.challenge_token;if(!body.access_token)throw new Error("Unable to create a secure session.");await finishLogin(body);return null;}async function verifyMfa(challenge:string,code:string){const response=await fetch(`${API_URL}/api/v1/auth/mfa/verify-login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({challenge_token:challenge,code})});const body=await response.json().catch(()=>({}));if(!response.ok)throw new Error(body.detail??"Invalid security code.");await finishLogin(body);}async function checkIn(){try{const point=await currentPosition();const background=await Location.requestBackgroundPermissionsAsync();if(background.status!=="granted")throw new Error("Allow location all the time to start an agent shift.");await api("/api/v1/agent/check-in",{method:"POST",body:JSON.stringify(point)});setShiftActive(true);await startBackgroundTracking();setAssignments(await api("/api/v1/agent/assignments"));await loadHistory();}catch(reason){setError(reason instanceof Error?reason.message:"Unable to check in.");}}async function checkOut(){try{const point=await currentPosition();await api("/api/v1/agent/check-out",{method:"POST",body:JSON.stringify(point)});await stopBackgroundTracking();setShiftActive(false);setAssignments([]);await loadHistory();}catch(reason){setError(reason instanceof Error?reason.message:"Unable to check out.");}}async function startBackgroundTracking(){const available=await TaskManager.isAvailableAsync();if(!available)return;if(!await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)){await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK,{accuracy:Location.Accuracy.High,timeInterval:15000,distanceInterval:20,pausesUpdatesAutomatically:false,showsBackgroundLocationIndicator:true,foregroundService:{notificationTitle:"zChit shift active",notificationBody:"Location tracking is active for your collection shift.",notificationColor:"#047857"}});}}async function stopBackgroundTracking(){if(await Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK))await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);}async function startTracking(){stopTracking();if(token)await flushLocations(token);watch.current=await Location.watchPositionAsync({accuracy:Location.Accuracy.High,timeInterval:15000,distanceInterval:20},location=>{if(!token)return;try{void uploadOrQueueLocation(locationProof(location),token);}catch{}});void startBackgroundTracking();}function stopTracking(){watch.current?.remove();watch.current=null;}async function collect(assignment:Assignment,installment:Installment|null,type:"regular"|"late"|"advance",amountType:"full"|"partial",amount:string,mode:string,reference:string,notes:string){const point=await currentPosition();const result=await api("/api/v1/agent/collections",{method:"POST",body:JSON.stringify({enrollment_id:assignment.enrollment_id,schedule_id:installment?.schedule_id??null,collection_type:type,amount_type:amountType,amount:Number(amount),payment_mode:mode,reference_number:reference||null,notes:notes||null,...point,location_text:"Mobile GPS collection"})});setAssignments(await api("/api/v1/agent/assignments"));await loadHistory();setReceipt(result);}async function clearSession(){stopTracking();await stopBackgroundTracking();await SecureStore.deleteItemAsync(ACCESS);await SecureStore.deleteItemAsync(REFRESH);await SecureStore.deleteItemAsync(PENDING_LOCATIONS);setToken(null);setShiftActive(false);setAssignments([]);setProfile(null);}async function logout(){await clearSession();setScreen("login");}if(screen==="splash")return <Splash opacity={opacity}/>;if(screen==="gps")return <GpsGate error={error} onEnable={requestGps}/>;if(screen==="login")return <LoginScreen error={error} setError={setError} onLogin={login} onVerifyMfa={verifyMfa}/>;return <Dashboard name={agentName} shiftActive={shiftActive} assignments={assignments} profile={profile} onLoadProfile={loadProfile} history={history} onRefreshHome={refreshHome} onLoadHistory={loadHistory} error={error} receipt={receipt} onCheckIn={checkIn} onCheckOut={checkOut} onCollect={collect} onDismissReceipt={()=>setReceipt(null)} onLogout={logout}/>;}
+export default function App() {
+    const [screen, setScreen] = useState<Screen>("splash");
+    const [shiftActive, setShiftActive] = useState(false);
+    const [agentName, setAgentName] = useState("");
+    const [assignments, setAssignments] = useState<Assignment[]>([]);
+    const [receipt, setReceipt] = useState<Receipt | null>(null);
+    const [profile, setProfile] = useState<AgentProfile | null>(null);
+    const [history, setHistory] = useState<CollectionHistoryData>({ rows: [], total_amount: "0", total_count: 0, today_amount: "0", today_count: 0, customers: [] });
+    const [error, setError] = useState("");
+    const opacity = useRef(new Animated.Value(0)).current;
+    const shiftAction = useRef(false);
+    const booting = useRef(false);
+    useEffect(() => {
+        Animated.timing(opacity, { toValue: 1, duration: 650, useNativeDriver: true }).start();
+        const timer = setTimeout(() => void boot(), 1900);
+        return () => clearTimeout(timer);
+    }, []);
+    useEffect(() => {
+        const subscription = AppState.addEventListener("change", state => {
+            if (state === "active" && screen !== "splash" && screen !== "login" && !shiftAction.current) void boot();
+        });
+        return () => subscription.remove();
+    }, [screen]);
+    function showError(reason: unknown) {
+        setError(reason instanceof Error ? reason.message : "Unable to connect. Please try again.");
+        if (reason instanceof ApiError && reason.status === 401) {
+            setError("Your session needs sign-in again. Your workday has not been closed.");
+            setScreen("login");
+        }
+    }
+    async function syncStatus() {
+        const status = await workday.status();
+        setAgentName(status.employee_name);
+        setShiftActive(status.shift_active);
+        return status;
+    }
+    async function boot() {
+        if (booting.current) return;
+        booting.current = true;
+        try {
+            const local = await workday.savedShift();
+            setShiftActive(Boolean(local));
+            if (!await gpsReady()) { setScreen("gps"); return; }
+            const saved = await storage.getItemAsync(ACCESS);
+            if (!saved) { setScreen("login"); return; }
+            await storage.getItemAsync(REFRESH);
+            setScreen("dashboard");
+            if (local) {
+                if (!await backgroundReady()) return;
+                await workday.resume();
+            }
+            await refreshHome();
+            await loadProfile();
+        } catch (reason) {
+            setScreen(current => current === "splash" ? "login" : current);
+            showError(reason);
+        } finally { booting.current = false; }
+    }
+    async function gpsReady() {
+        return await Location.hasServicesEnabledAsync() && (await Location.getForegroundPermissionsAsync()).status === "granted";
+    }
+    async function backgroundReady() {
+        if ((await Location.getBackgroundPermissionsAsync()).status === "granted") return true;
+        setError("Allow location all the time to continue your active shift.");
+        setScreen("gps");
+        return false;
+    }
+    async function requestGps() {
+        try {
+            if ((await Location.requestForegroundPermissionsAsync()).status !== "granted") throw new Error("Location permission is required to use zChit Agent.");
+            if (!await Location.hasServicesEnabledAsync()) throw new Error("Turn on device location services, then try again.");
+            if (shiftActive && (await Location.requestBackgroundPermissionsAsync()).status !== "granted") throw new Error("Allow location all the time to continue your active shift.");
+            await boot();
+        } catch (reason) { showError(reason); }
+    }
+    async function currentPosition(): Promise<Position> {
+        if (!await gpsReady()) throw new Error("GPS must be enabled.");
+        return locationProof(await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }));
+    }
+    async function loadProfile(_access?: string | null) {
+        const data = await api("/api/v1/agent/profile");
+        setProfile(data);
+        return data;
+    }
+    async function refreshHome() {
+        try {
+            const status = await syncStatus();
+            if (status.shift_active) {
+                if (!await backgroundReady()) return;
+                await workday.resume();
+                await workday.flush();
+            }
+            setAssignments(status.shift_active ? await api("/api/v1/agent/assignments") : []);
+            await loadHistory();
+            setError("");
+        } catch (reason) { showError(reason); throw reason; }
+    }
+    async function loadHistory(_access?: string | null, query = "") {
+        const data = await api(`/api/v1/agent/collections${query}`);
+        setHistory(data);
+        return data;
+    }
+    async function finishLogin(body: { access_token: string; refresh_token?: string }) {
+        if (!body.access_token || !body.refresh_token) throw new Error("Unable to create a secure session.");
+        const refresh = body.refresh_token;
+        await workday.signIn(async () => {
+            await storage.setItemAsync(REFRESH, refresh);
+            await storage.setItemAsync(ACCESS, body.access_token);
+        });
+        await boot();
+    }
+    async function login(code: string, password: string) {
+        const body = await api("/api/v1/auth/login", { method: "POST", body: JSON.stringify({ email: code.trim().toUpperCase(), password }) }, false);
+        if (body.mfa_required && body.challenge_token) return body.challenge_token;
+        await finishLogin(body);
+        return null;
+    }
+    async function verifyMfa(challenge: string, code: string) {
+        await finishLogin(await api("/api/v1/auth/mfa/verify-login", { method: "POST", body: JSON.stringify({ challenge_token: challenge, code }) }, false));
+    }
+    async function checkIn() {
+        if (shiftAction.current) return;
+        shiftAction.current = true;
+        try {
+            if ((await Location.requestBackgroundPermissionsAsync()).status !== "granted") throw new Error("Allow location all the time to start an agent shift.");
+            await workday.checkIn(currentPosition);
+            setShiftActive(true);
+            await refreshHome();
+        } catch (reason) {
+            setShiftActive(Boolean(await workday.savedShift()));
+            showError(reason);
+        } finally { shiftAction.current = false; }
+    }
+    async function checkOut() {
+        if (shiftAction.current) return;
+        shiftAction.current = true;
+        try {
+            await workday.checkOut(currentPosition);
+            setShiftActive(false);
+            setAssignments([]);
+            setError("");
+            await loadHistory();
+        } catch (reason) {
+            setShiftActive(Boolean(await workday.savedShift()));
+            showError(reason);
+        }
+        finally { shiftAction.current = false; }
+    }
+    async function collect(assignment: Assignment, installment: Installment | null, type: "regular" | "late" | "advance", amountType: "full" | "partial", amount: string, mode: string, reference: string, notes: string) {
+        const point = await currentPosition();
+        const result = await api("/api/v1/agent/collections", { method: "POST", body: JSON.stringify({ enrollment_id: assignment.enrollment_id, schedule_id: installment?.schedule_id ?? null, collection_type: type, amount_type: amountType, amount: Number(amount), payment_mode: mode, reference_number: reference || null, notes: notes || null, ...point, location_text: "Mobile GPS collection" }) });
+        setAssignments(await api("/api/v1/agent/assignments"));
+        await loadHistory();
+        setReceipt(result);
+    }
+    async function logout() {
+        if (shiftAction.current) return;
+        shiftAction.current = true;
+        try {
+            await workday.assertCanLogout();
+            await storage.deleteItemAsync(ACCESS);
+            await storage.deleteItemAsync(REFRESH);
+            setShiftActive(false);
+            setAssignments([]);
+            setProfile(null);
+            setReceipt(null);
+            setHistory({ rows: [], total_amount: "0", total_count: 0, today_amount: "0", today_count: 0, customers: [] });
+            setError("");
+            setScreen("login");
+        } catch (reason) {
+            showError(reason);
+            Alert.alert("Unable to log out", reason instanceof Error ? reason.message : "Please reconnect and close your workday first.");
+        } finally { shiftAction.current = false; }
+    }
+    if (screen === "splash") return <Splash opacity={opacity}/>;
+    if (screen === "gps") return <GpsGate error={error} onEnable={requestGps}/>;
+    if (screen === "login") return <LoginScreen error={error} setError={setError} onLogin={login} onVerifyMfa={verifyMfa}/>;
+    return <Dashboard name={agentName} shiftActive={shiftActive} assignments={assignments} profile={profile} onLoadProfile={loadProfile} history={history} onRefreshHome={async () => { try { await refreshHome(); } catch {} }} onLoadHistory={loadHistory} error={error} receipt={receipt} onCheckIn={checkIn} onCheckOut={checkOut} onCollect={collect} onDismissReceipt={() => setReceipt(null)} onLogout={logout}/>;
+}
 function Brand(){return <View style={s.brand}><Text style={s.brandText}>z</Text></View>}
 function Splash({opacity}:{opacity:Animated.Value}){return <SafeAreaView style={s.splash}><StatusBar style="light"/><Animated.View style={{opacity,alignItems:"center"}}><Brand/><Text style={s.splashTitle}>zChit</Text><Text style={s.splashSub}>COLLECTION AGENT</Text><Text style={s.splashCaption}>Secure collections. Every route. Every receipt.</Text></Animated.View><ActivityIndicator style={s.loader} color="#a7f3d0"/></SafeAreaView>}
 function GpsGate({error,onEnable}:{error:string;onEnable:()=>void}){return <SafeAreaView style={s.gate}><StatusBar style="dark"/><View style={s.gpsIcon}><Text style={s.gpsEmoji}>◎</Text></View><Text style={s.gateTitle}>Location required</Text><Text style={s.gateText}>zChit Agent works only while GPS is enabled. Location verifies attendance, live routes, and every collection receipt.</Text>{error?<Text style={s.error}>{error}</Text>:null}<Pressable style={[s.primary,{width:"100%",maxWidth:360,minHeight:52,paddingHorizontal:24,alignSelf:"center"}]} onPress={onEnable}><Text style={s.primaryText}>Enable GPS access</Text></Pressable><Pressable style={{minHeight:44,paddingHorizontal:18,alignItems:"center",justifyContent:"center",marginTop:8}} onPress={()=>Linking.openSettings()}><Text style={[s.settingsLink,{marginTop:0}]}>Open device settings</Text></Pressable></SafeAreaView>}

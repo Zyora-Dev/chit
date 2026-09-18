@@ -2,7 +2,7 @@
   "expo": {
     "name": "zChit Agent",
     "slug": "zchit-agent",
-     "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/zchit-agent.png",
     "userInterfaceStyle": "light",
@@ -20,6 +20,9 @@
       [
         "expo-location",
         {
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
           "locationWhenInUsePermission": "zChit uses your location for attendance, assigned collections, and collection receipts.",
           "locationAlwaysAndWhenInUsePermission": "Allow zChit to track your route while an active collection shift continues in the background."
         }
@@ -37,7 +40,7 @@
     },
     "android": {
       "package": "com.zchit.agent",
-       "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
